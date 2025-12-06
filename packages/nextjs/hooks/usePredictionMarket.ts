@@ -13,14 +13,11 @@ export const usePredictionMarket = () => {
     functionName: "getMarketCount",
   });
 
-  const getMarket = (marketId: number) => {
-    return useReadContract({
-      address: contractInfo?.address,
-      abi: contractInfo?.abi,
-      functionName: "getMarket",
-      args: [BigInt(marketId)],
-    });
-  };
+  // Helper function to get market - returns the contract info for manual reading
+  const getMarketInfo = () => ({
+    address: contractInfo?.address,
+    abi: contractInfo?.abi,
+  });
 
   const createMarket = async (question: string, deadline: bigint, targetPrice: bigint) => {
     if (!contractInfo) throw new Error("Contract not loaded");
@@ -67,7 +64,7 @@ export const usePredictionMarket = () => {
   return {
     contract: contractInfo,
     marketCount,
-    getMarket,
+    getMarketInfo,
     createMarket,
     placeBet,
     resolveMarket,

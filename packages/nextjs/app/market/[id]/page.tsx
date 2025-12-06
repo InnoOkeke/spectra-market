@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useEffect, useState, useMemo } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { useFhevm } from "@fhevm-sdk";
 import { useFheHelpers } from "~~/utils/fhe";
 import { fetchUpcomingSportsEvents, getSportIcon } from "~~/utils/sportsApi";
@@ -31,10 +31,22 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [betPlaced, setBetPlaced] = useState(false);
   
-  const { placeBet: placeBetContract, getMarket } = usePredictionMarket();
+  const { placeBet: placeBetContract, getMarketInfo } = usePredictionMarket();
   
   // Get PredictionMarket contract address from deployed contracts
   const contractAddress = deployedContracts[11155111]?.PredictionMarket?.address as `0x${string}` | undefined;
+  
+  // Use the wagmi hook properly at the top level
+  const marketInfo = getMarketInfo();
+  const { data: contractMarketData } = useReadContract({
+    address: marketInfo.address,
+    abi: marketInfo.abi,
+    functionName: "getMarket",
+    args: id && !isNaN(parseInt(id)) ? [BigInt(parseInt(id))] : undefined,
+    query: {
+      enabled: !!id && !isNaN(parseInt(id)) && !!marketInfo.address && !!marketInfo.abi,
+    },
+  });
   
   // Initialize FHEVM
   const provider = useMemo(() => {
@@ -79,8 +91,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
           return;
         }
 
-        // Fetch from contract
-        const { data: contractMarketData } = getMarket(marketId);
+        // Use the contract data from the hook
         if (contractMarketData && Array.isArray(contractMarketData)) {
           const [question, deadline] = contractMarketData as [string, bigint, ...any[]];
           setMarketData({
@@ -98,7 +109,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
     }
 
     loadMarketData();
-  }, [id, getMarket]);
+  }, [id, contractMarketData]);
 
   async function placeBet(e: React.FormEvent) {
     e.preventDefault();

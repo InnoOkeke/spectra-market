@@ -57,15 +57,21 @@ export class RelayerSDKLoader {
       script.async = true;
 
       script.onload = () => {
-        if (!isFhevmWindowType(window, this._trace)) {
-          console.log("[RelayerSDKLoader] script onload FAILED...");
-          reject(
-            new Error(
-              `RelayerSDKLoader: Relayer SDK script has been successfully loaded from ${SDK_CDN_URL}, however, the window.relayerSDK object is invalid.`
-            )
-          );
-        }
-        resolve();
+        // Give the SDK a moment to initialize on window object
+        setTimeout(() => {
+          if (!isFhevmWindowType(window, this._trace)) {
+            console.log("[RelayerSDKLoader] script onload FAILED...");
+            console.log("[RelayerSDKLoader] window object:", Object.keys(window));
+            reject(
+              new Error(
+                `RelayerSDKLoader: Relayer SDK script has been successfully loaded from ${SDK_CDN_URL}, however, the window.relayerSDK object is invalid.`
+              )
+            );
+            return;
+          }
+          console.log("[RelayerSDKLoader] SDK loaded successfully!");
+          resolve();
+        }, 100); // Wait 100ms for SDK to attach to window
       };
 
       script.onerror = () => {
