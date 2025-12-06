@@ -1,19 +1,25 @@
-# FHEVM React Template
+# Spectra - Encrypted Prediction Markets
 
-A minimal React frontend template for building FHEVM-enabled decentralized applications (dApps). This template provides a simple development interface for interacting with FHEVM smart contracts, specifically the `FHECounter.sol` contract.
 
-## 🚀 What is FHEVM?
+Professional encrypted prediction markets powered by FHEVM. Your positions remain confidential until market resolution.
 
-FHEVM (Fully Homomorphic Encryption Virtual Machine) enables computation on encrypted data directly on Ethereum. This template demonstrates how to build dApps that can perform computations while keeping data private.
+## 🌐 Live Demo
+
+Visit the live application: [https://innookeke.github.io/spectra-market](https://innookeke.github.io/spectra-market)
 
 ## ✨ Features
 
-- **🔐 FHEVM Integration**: Built-in support for fully homomorphic encryption
-- **⚛️ React + Next.js**: Modern, performant frontend framework
-- **🎨 Tailwind CSS**: Utility-first styling for rapid UI development
-- **🔗 RainbowKit**: Seamless wallet connection and management
-- **🌐 Multi-Network Support**: Works on both Sepolia testnet and local Hardhat node
-- **📦 Monorepo Structure**: Organized packages for SDK, contracts, and frontend
+- **🔐 Fully Encrypted Bets**: All positions are encrypted using FHEVM technology
+- **⚽ Sports Markets**: Real-time sports betting markets from major leagues
+- **💰 Crypto Markets**: Prediction markets for cryptocurrency prices
+- **👑 Admin Controls**: Create and resolve markets (admin-only)
+- **💸 Claim Winnings**: Easy withdrawal of earnings
+- **🎨 Beautiful UI**: Professional emerald green design
+- **📱 Responsive**: Works perfectly on mobile and desktop
+
+## 🚀 What is FHEVM?
+
+FHEVM (Fully Homomorphic Encryption Virtual Machine) enables computation on encrypted data directly on Ethereum. Spectra uses FHEVM to keep all bet positions private until market resolution.
 
 ## 📋 Prerequinextjss
 

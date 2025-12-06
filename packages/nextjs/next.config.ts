@@ -14,11 +14,15 @@ const nextConfig: NextConfig = {
     config.externals.push("pino-pretty", "lokijs", "encoding");
     return config;
   },
+  // GitHub Pages configuration
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || "",
+  assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || "",
 };
 
 const isIpfs = process.env.NEXT_PUBLIC_IPFS_BUILD === "true";
+const isGitHubPages = process.env.GITHUB_PAGES === "true";
 
-if (isIpfs) {
+if (isIpfs || isGitHubPages) {
   nextConfig.output = "export";
   nextConfig.trailingSlash = true;
   nextConfig.images = {
