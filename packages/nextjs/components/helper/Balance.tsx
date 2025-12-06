@@ -22,6 +22,7 @@ export const Balance = ({ address, className = "" }: BalanceProps) => {
     isLoading,
   } = useWatchBalance({
     address,
+    chainId: targetNetwork.id,
   });
 
   if (!address || isLoading || balance === null) {

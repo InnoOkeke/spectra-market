@@ -25,7 +25,7 @@ interface MarketData {
 export default function MarketDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { address, isConnected, chain } = useAccount();
-  const [amount, setAmount] = useState("0.01");
+  const [amount, setAmount] = useState("0.001");
   const [side, setSide] = useState("yes");
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -193,7 +193,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       // Reset form after 3 seconds
       setTimeout(() => {
         setBetPlaced(false);
-        setAmount("0.01");
+        setAmount("0.001");
       }, 3000);
     } catch (error) {
       console.error("Error placing bet:", error);
@@ -283,13 +283,13 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
                 <label className="block text-sm font-medium text-[#111111] mb-2">Amount (ETH)</label>
                 <input
                   type="number"
-                  step="0.01"
-                  min="0.01"
+                  step="0.001"
+                  min="0.001"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
                   disabled={isSubmitting || !isConnected}
                   className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#0FA958] focus:ring-2 focus:ring-[#0FA958]/20 outline-none transition bg-white text-[#111111] disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="0.01"
+                  placeholder="0.001"
                   required
                 />
               </div>

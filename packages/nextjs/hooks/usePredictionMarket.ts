@@ -28,6 +28,7 @@ export const usePredictionMarket = () => {
       address: contractInfo.address,
       abi: contractInfo.abi,
       functionName: "createMarket",
+      gas: 300000n,
       args: [question, deadline, targetPrice] as const,
     });
   };
@@ -39,6 +40,7 @@ export const usePredictionMarket = () => {
       abi: contractInfo.abi,
       functionName: "placeEncryptedBet",
       args: [marketId, handles, inputProof] as const,
+      gas: 500000n, // Set reasonable gas limit for encrypted operations
     });
   };
 
