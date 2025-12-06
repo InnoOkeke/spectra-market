@@ -2,16 +2,13 @@ import { useReadContract } from "wagmi";
 import deployedContracts from "~~/contracts/deployedContracts";
 
 export interface MarketPoolInfo {
-  totalYesBets: bigint;
-  totalNoBets: bigint;
-  totalYesAmount: bigint;
-  totalNoAmount: bigint;
   participantCount: bigint;
+  // V3: Pool amounts and bet counts are hidden for privacy
 }
 
 export const useMarketPoolInfo = (marketId: number) => {
-  const contractAddress = deployedContracts[11155111].PredictionMarketV2.address;
-  const contractAbi = deployedContracts[11155111].PredictionMarketV2.abi;
+  const contractAddress = deployedContracts[11155111].PredictionMarketV3.address;
+  const contractAbi = deployedContracts[11155111].PredictionMarketV3.abi;
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: contractAddress,
@@ -28,18 +25,9 @@ export const useMarketPoolInfo = (marketId: number) => {
 
   let poolInfo: MarketPoolInfo | undefined;
   if (data) {
-    const [totalYesBets, totalNoBets, totalYesAmount, totalNoAmount, participantCount] = data as [
-      bigint,
-      bigint,
-      bigint,
-      bigint,
-      bigint,
-    ];
+    // V3 only returns participantCount
+    const participantCount = data as bigint;
     poolInfo = {
-      totalYesBets,
-      totalNoBets,
-      totalYesAmount,
-      totalNoAmount,
       participantCount,
     };
   }

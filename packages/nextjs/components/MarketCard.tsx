@@ -22,12 +22,8 @@ export function MarketCard({ market, showPoolInfo = false }: MarketCardProps) {
   const deadlineDate = new Date(Number(market.deadline) * 1000);
   const { poolInfo } = useMarketPoolInfo(market.id);
   
-  const totalPool = poolInfo 
-    ? Number(formatEther(poolInfo.totalYesAmount + poolInfo.totalNoAmount)) 
-    : 0;
-  const yesPercentage = poolInfo && poolInfo.totalYesAmount + poolInfo.totalNoAmount > 0n
-    ? (Number(poolInfo.totalYesAmount) / Number(poolInfo.totalYesAmount + poolInfo.totalNoAmount)) * 100
-    : 50;
+  // V3: Only participant count available (pool amounts encrypted)
+  const participantCount = poolInfo ? Number(poolInfo.participantCount) : 0;
   
   const category = CATEGORY_INFO.find(c => c.id === Number(market.categoryId)) || CATEGORY_INFO[0];
   
@@ -58,39 +54,16 @@ export function MarketCard({ market, showPoolInfo = false }: MarketCardProps) {
           {market.question}
         </h3>
 
-        {/* Pool Statistics */}
+        {/* Pool Statistics - Privacy Protected */}
         {poolInfo && (
           <div className="mb-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Total Pool:</span>
-                <span className="font-bold text-[#111111]">{totalPool.toFixed(4)} ETH</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Participants:</span>
-                <span className="font-bold text-[#111111]">{poolInfo.participantCount.toString()}</span>
-              </div>
-            </div>
-            
-            {/* YES/NO Distribution Bar */}
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-green-600 font-semibold">YES {yesPercentage.toFixed(0)}%</span>
-                <span className="text-red-600 font-semibold">NO {(100 - yesPercentage).toFixed(0)}%</span>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex">
-                <div 
-                  className="bg-gradient-to-r from-green-500 to-green-400" 
-                  style={{ width: `${yesPercentage}%` }}
-                />
-                <div 
-                  className="bg-gradient-to-r from-red-400 to-red-500" 
-                  style={{ width: `${100 - yesPercentage}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-xs mt-1 text-gray-500">
-                <span>{Number(formatEther(poolInfo.totalYesAmount)).toFixed(4)} ETH</span>
-                <span>{Number(formatEther(poolInfo.totalNoAmount)).toFixed(4)} ETH</span>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-800 mb-2">
+                🔐 <strong>Privacy Protected:</strong> Pool amounts are encrypted
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Participants:</span>
+                <span className="font-bold text-[#111111]">{participantCount}</span>
               </div>
             </div>
           </div>

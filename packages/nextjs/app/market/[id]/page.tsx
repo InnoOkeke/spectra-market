@@ -38,8 +38,8 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
   const { userBet } = useUserBet(parseInt(id), address);
   const { poolInfo } = useMarketPoolInfo(parseInt(id));
   
-  // Get PredictionMarketV2 contract address from deployed contracts
-  const contractAddress = deployedContracts[11155111]?.PredictionMarketV2?.address as `0x${string}` | undefined;
+  // Get PredictionMarketV3 contract address from deployed contracts
+  const contractAddress = deployedContracts[11155111]?.PredictionMarketV3?.address as `0x${string}` | undefined;
   
   // Use the wagmi hook properly at the top level
   const marketInfo = getMarketInfo();
@@ -86,7 +86,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
     ];
 
     const participantCount = poolInfo ? Number(poolInfo.participantCount) : 0;
-    const totalBets = poolInfo ? Number(poolInfo.totalYesBets + poolInfo.totalNoBets) : 0;
+    const totalBets = participantCount; // V3: Only participant count available
 
     return {
       id: marketId,
@@ -132,34 +132,36 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
         throw new Error("Missing encryption or contract dependencies");
       }
 
-      // Only encrypt the amount, side is public
-      setLoadingStep("Encrypting bet amount...");
-      const enc = await encryptBet((builder: any) => {
+      // Encrypt both amount AND side for full privacy (V3)
+      setLoadingStep("Encrypting bet amount and side...");
+      const encAmount = await encryptBet((builder: any) => {
         builder.add64(BigInt(Math.floor(Number(amount) * 1e18)));
       });
       
-      if (!enc || !enc.handles || !enc.inputProof) {
+      const encSide = await encryptBet((builder: any) => {
+        builder.addBool(side === "yes");
+      });
+      
+      if (!encAmount || !encAmount.handles || !encSide || !encSide.handles || !encAmount.inputProof) {
         throw new Error("Encryption failed");
       }
 
       console.log("Encrypted data:", {
-        handleLength: enc.handles[0].length,
-        inputProofLength: enc.inputProof.length,
-        handleHex: toHex(enc.handles[0]),
-        inputProofHex: toHex(enc.inputProof),
+        amountHandleLength: encAmount.handles[0].length,
+        sideHandleLength: encSide.handles[0].length,
+        inputProofLength: encAmount.inputProof.length,
       });
 
       const marketId = BigInt(id);
-      const betSide = side === "yes";
       const betValue = BigInt(Math.floor(Number(amount) * 1e18));
       
-      // Send the encrypted data as bytes (not bytes32)
+      // Send both encrypted amount and side (V3)
       setLoadingStep("Waiting for wallet confirmation...");
       await placeBetContract(
         marketId,
-        toHex(enc.handles[0]) as `0x${string}`,
-        toHex(enc.inputProof) as `0x${string}`,
-        betSide,
+        toHex(encAmount.handles[0]) as `0x${string}`,
+        toHex(encSide.handles[0]) as `0x${string}`,
+        toHex(encAmount.inputProof) as `0x${string}`,
         betValue
       );
 
@@ -378,15 +380,14 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
             <div className="bg-white rounded-2xl border border-gray-200 p-6">
               <h2 className="text-xl font-bold text-[#111111] mb-4">Your Bet</h2>
               <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Amount:</span>
-                  <span className="font-bold">{formatEther(userBet.amount)} ETH</span>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                  <p className="text-sm text-blue-800">
+                    🔐 <strong>Privacy Protected:</strong> Your bet amount and side are encrypted.
+                  </p>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Side:</span>
-                  <span className={`font-bold ${userBet.side ? 'text-green-600' : 'text-red-600'}`}>
-                    {userBet.side ? 'YES' : 'NO'}
-                  </span>
+                  <span className="text-gray-600">Bet Placed:</span>
+                  <span className="font-bold">✓ Yes</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
@@ -395,7 +396,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
                   </span>
                 </div>
                 
-                {marketData && contractMarketData && Array.isArray(contractMarketData) && contractMarketData[3] && !userBet.claimed && userBet.side === contractMarketData[4] && (
+                {marketData && contractMarketData && Array.isArray(contractMarketData) && contractMarketData[3] && !userBet.claimed && (
                   <button
                     onClick={handleClaimWinnings}
                     disabled={isSubmitting}
@@ -413,23 +414,10 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
             <div className="bg-white rounded-2xl border border-gray-200 p-6">
               <h2 className="text-xl font-bold text-[#111111] mb-4">Pool Statistics</h2>
               <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Pool:</span>
-                  <span className="font-bold">
-                    {formatEther(poolInfo.totalYesAmount + poolInfo.totalNoAmount)} ETH
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">YES Pool:</span>
-                  <span className="font-bold text-green-600">
-                    {formatEther(poolInfo.totalYesAmount)} ETH ({poolInfo.totalYesBets.toString()} bets)
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">NO Pool:</span>
-                  <span className="font-bold text-red-600">
-                    {formatEther(poolInfo.totalNoAmount)} ETH ({poolInfo.totalNoBets.toString()} bets)
-                  </span>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                  <p className="text-sm text-blue-800">
+                    🔐 <strong>Privacy Protected:</strong> Pool amounts and individual bets are encrypted.
+                  </p>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Participants:</span>
@@ -439,28 +427,26 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
             </div>
           )}
 
-          {/* Bet List */}
+          {/* Bet List - Privacy Protected */}
           {bets && bets.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6 md:col-span-2">
-              <h2 className="text-xl font-bold text-[#111111] mb-4">Recent Bets ({bets.length})</h2>
+              <h2 className="text-xl font-bold text-[#111111] mb-4">Participants ({bets.length})</h2>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
+                <p className="text-sm text-blue-800">
+                  🔐 <strong>Privacy Protected:</strong> Bet amounts and sides are fully encrypted.
+                  Only participant addresses are visible.
+                </p>
+              </div>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {bets.slice(0, 10).map((bet, index) => (
                   <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm font-mono text-gray-600">
                         {bet.bettor.slice(0, 6)}...{bet.bettor.slice(-4)}
                       </span>
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        bet.side ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {bet.side ? 'YES' : 'NO'}
+                      <span className="px-2 py-1 rounded text-xs bg-gray-200 text-gray-700">
+                        Encrypted
                       </span>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold">{formatEther(bet.amount)} ETH</div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(Number(bet.timestamp) * 1000).toLocaleDateString()}
-                      </div>
                     </div>
                   </div>
                 ))}

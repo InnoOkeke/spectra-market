@@ -1,22 +1,22 @@
 import { useReadContract } from "wagmi";
 import deployedContracts from "~~/contracts/deployedContracts";
 
+// V3: Individual bet details are encrypted and not publicly readable
+// Only participant list is available
 export interface MarketBet {
   bettor: string;
-  amount: bigint;
-  side: boolean;
-  timestamp: bigint;
-  claimed: boolean;
+  // amount, side, timestamp are encrypted in V3
 }
 
 export const useMarketBets = (marketId: number) => {
-  const contractAddress = deployedContracts[11155111].PredictionMarketV2.address;
-  const contractAbi = deployedContracts[11155111].PredictionMarketV2.abi;
+  const contractAddress = deployedContracts[11155111].PredictionMarketV3.address;
+  const contractAbi = deployedContracts[11155111].PredictionMarketV3.abi;
 
+  // V3: Only get list of bettors, not bet details
   const { data, isLoading, error, refetch } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
-    functionName: "getAllMarketBets",
+    functionName: "getMarketBettors",
     args: [BigInt(marketId)],
     query: {
       refetchInterval: false, // Disable auto-refetch
@@ -28,21 +28,9 @@ export const useMarketBets = (marketId: number) => {
 
   let bets: MarketBet[] = [];
   if (data) {
-    const [bettors, amounts, sides, timestamps, claimed] = data as [
-      string[],
-      bigint[],
-      boolean[],
-      bigint[],
-      boolean[],
-    ];
-
-    bets = bettors.map((bettor, index) => ({
-      bettor,
-      amount: amounts[index],
-      side: sides[index],
-      timestamp: timestamps[index],
-      claimed: claimed[index],
-    }));
+    // V3: data is just an array of addresses
+    const bettors = data as string[];
+    bets = bettors.map(bettor => ({ bettor }));
   }
 
   return {
@@ -54,8 +42,8 @@ export const useMarketBets = (marketId: number) => {
 };
 
 export const useUserBet = (marketId: number, userAddress: string | undefined) => {
-  const contractAddress = deployedContracts[11155111].PredictionMarketV2.address;
-  const contractAbi = deployedContracts[11155111].PredictionMarketV2.abi;
+  const contractAddress = deployedContracts[11155111].PredictionMarketV3.address;
+  const contractAbi = deployedContracts[11155111].PredictionMarketV3.abi;
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: contractAddress,
@@ -73,16 +61,16 @@ export const useUserBet = (marketId: number, userAddress: string | undefined) =>
   let userBet:
     | {
         exists: boolean;
-        amount: bigint;
-        side: boolean;
         timestamp: bigint;
         claimed: boolean;
+        // V3: amount and side are encrypted, not readable
       }
     | undefined;
 
   if (data) {
-    const [exists, amount, side, timestamp, claimed] = data as [boolean, bigint, boolean, bigint, boolean];
-    userBet = { exists, amount, side, timestamp, claimed };
+    // V3: only returns exists, timestamp, claimed
+    const [exists, timestamp, claimed] = data as [boolean, bigint, boolean];
+    userBet = { exists, timestamp, claimed };
   }
 
   return {

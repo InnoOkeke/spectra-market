@@ -17,8 +17,8 @@ export default function AdminPage() {
     withdrawFees,
   } = usePredictionMarket();
 
-  const contractAddress = deployedContracts[11155111].PredictionMarketV2.address;
-  const contractAbi = deployedContracts[11155111].PredictionMarketV2.abi;
+  const contractAddress = deployedContracts[11155111].PredictionMarketV3.address;
+  const contractAbi = deployedContracts[11155111].PredictionMarketV3.abi;
 
   // Read contract data
   const { data: categoryCount } = useReadContract({

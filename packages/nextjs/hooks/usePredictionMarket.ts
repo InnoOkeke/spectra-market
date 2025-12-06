@@ -3,7 +3,7 @@ import { usePublicClient, useReadContract, useWriteContract, useAccount, useChai
 import { useDeployedContractInfo, useSelectedNetwork } from "./helper";
 
 export const usePredictionMarket = () => {
-  const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarketV2" });
+  const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarketV3" });
   const selectedNetwork = useSelectedNetwork();
   const publicClient = usePublicClient({ chainId: selectedNetwork.id });
   const [fallbackMarketCount, setFallbackMarketCount] = useState<bigint | undefined>(undefined);
@@ -79,13 +79,13 @@ export const usePredictionMarket = () => {
     });
   };
 
-  const placeBet = async (marketId: bigint, encryptedData: `0x${string}`, inputProof: `0x${string}`, side: boolean, value: bigint) => {
+  const placeBet = async (marketId: bigint, encryptedAmount: `0x${string}`, encryptedSide: `0x${string}`, inputProof: `0x${string}`, value: bigint) => {
     if (!contractInfo) throw new Error("Contract not loaded");
     return writeContractAsync({
       address: contractInfo.address,
       abi: contractInfo.abi,
       functionName: "placeEncryptedBet",
-      args: [marketId, encryptedData, inputProof, side] as const,
+      args: [marketId, encryptedAmount, encryptedSide, inputProof] as const,
       value, // Send ETH with the transaction
       gas: 500000n, // Set reasonable gas limit for encrypted operations
     });
