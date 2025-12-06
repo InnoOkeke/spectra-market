@@ -51,6 +51,18 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
   const { ethersSigner } = useWagmiEthers();
   
   const { encryptBet } = useFheHelpers({ instance, signer: ethersSigner, contractAddress });
+  
+  // Log initialization status
+  useEffect(() => {
+    console.log("FHEVM Initialization Status:", {
+      hasInstance: !!instance,
+      hasEthersSigner: !!ethersSigner,
+      hasContractAddress: !!contractAddress,
+      hasProvider: !!provider,
+      chainId: chain?.id,
+      isConnected,
+    });
+  }, [instance, ethersSigner, contractAddress, provider, chain?.id, isConnected]);
 
   useEffect(() => {
     // Load market data based on ID
@@ -117,6 +129,19 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       alert("Contract address not found. Please check network.");
       return;
     }
+    
+    // Check FHEVM initialization
+    if (!instance) {
+      alert("FHEVM instance not initialized. Please wait and try again.");
+      console.error("Missing FHEVM instance");
+      return;
+    }
+    
+    if (!ethersSigner) {
+      alert("Wallet signer not available. Please ensure wallet is connected.");
+      console.error("Missing ethers signer");
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -130,6 +155,9 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
         hasEncryptBet: !!encryptBet,
         hasPlaceBetContract: !!placeBetContract,
         hasInstance: !!instance,
+        hasEthersSigner: !!ethersSigner,
+        chainId: chain?.id,
+        providerExists: !!provider,
       });
 
       // Encrypt the bet data using Zama FHEVM
@@ -308,6 +336,22 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
                   </div>
                 </div>
               )}
+              
+              {isConnected && (!instance || !ethersSigner) && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <div className="flex items-center gap-2 text-sm text-blue-700">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    <span>Initializing encryption system... Please wait.</span>
+                  </div>
+                </div>
+              )}
 
               {betPlaced && (
                 <div className="p-4 bg-[#0FA958]/10 border border-[#0FA958]/20 rounded-xl">
@@ -327,7 +371,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
               <div className="pt-4">
                 <button
                   type="submit"
-                  disabled={isSubmitting || !isConnected}
+                  disabled={isSubmitting || !isConnected || !instance || !ethersSigner}
                   className="w-full bg-gradient-to-r from-[#0FA958] to-[#19C37D] hover:from-[#0FA958]/90 hover:to-[#19C37D]/90 text-white font-semibold py-4 rounded-xl transition-all transform hover:scale-[1.02] shadow-lg shadow-[#0FA958]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {isSubmitting ? (
@@ -342,6 +386,8 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
                       </svg>
                       Processing...
                     </span>
+                  ) : !instance || !ethersSigner ? (
+                    "Initializing..."
                   ) : (
                     "🔐 Place Encrypted Bet"
                   )}
