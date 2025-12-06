@@ -6,8 +6,8 @@ import "~~/styles/globals.css";
 import { getMetadata } from "~~/utils/helper/getMetadata";
 
 export const metadata = getMetadata({
-  title: "Zama Template",
-  description: "Built with FHEVM",
+  title: "Spectra - Encrypted Prediction Markets",
+  description: "Privacy-preserving prediction markets powered by FHEVM technology. Bet on crypto, sports, and real-world events with complete confidentiality.",
 });
 
 const DappWrapper = ({ children }: { children: React.ReactNode }) => {
