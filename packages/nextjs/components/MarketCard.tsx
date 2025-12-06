@@ -1,13 +1,31 @@
-import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
+import { useReadContract } from "wagmi";
 import Link from "next/link";
+import { useDeployedContractInfo } from "~~/hooks/helper";
 
 interface MarketCardProps {
   marketId: number;
 }
 
 export function MarketCard({ marketId }: MarketCardProps) {
-  const { getMarket } = usePredictionMarket();
-  const { data: marketData } = getMarket(marketId);
+  const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarket" });
+  
+  const { data: marketData, isLoading } = useReadContract({
+    address: contractInfo?.address,
+    abi: contractInfo?.abi,
+    functionName: "getMarket",
+    args: [BigInt(marketId)],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-2xl p-6 border border-gray-200">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+    );
+  }
 
   if (!marketData || !Array.isArray(marketData)) {
     return null;

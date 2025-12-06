@@ -1,7 +1,6 @@
 "use client";
 
 // @refresh reset
-import { Balance } from "../Balance";
 import { AddressInfoDropdown } from "./AddressInfoDropdown";
 import { WrongNetworkDropdown } from "./WrongNetworkDropdown";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -10,7 +9,7 @@ import { useTargetNetwork } from "~~/hooks/helper/useTargetNetwork";
 import { getBlockExplorerAddressLink } from "~~/utils/helper";
 
 /**
- * Custom Wagmi Connect Button (watch balance + custom design)
+ * Custom Wagmi Connect Button (custom design)
  */
 export const RainbowKitCustomConnectButton = () => {
   const { targetNetwork } = useTargetNetwork();
@@ -44,10 +43,6 @@ export const RainbowKitCustomConnectButton = () => {
 
               return (
                 <>
-                  <div className="flex flex-col items-center mr-1">
-                    <Balance address={account.address as Address} className="min-h-0 h-auto text-white" />
-                    <span className="text-xs text-gray-400">{chain.name}</span>
-                  </div>
                   <AddressInfoDropdown
                     address={account.address as Address}
                     displayName={account.displayName}
