@@ -4,20 +4,48 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import { isAdmin } from "~~/utils/adminConfig";
+import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
 
 export default function AdminPage() {
   const { address, isConnected } = useAccount();
   const userIsAdmin = isAdmin(address);
+  const { createMarket: createMarketContract } = usePredictionMarket();
+  
+  // Debug logging
+  console.log("Admin check:", { address, userIsAdmin, isAdmin: isAdmin(address) });
 
   const [marketId, setMarketId] = useState("0");
   const [question, setQuestion] = useState("");
   const [deadline, setDeadline] = useState("");
   const [targetPrice, setTargetPrice] = useState("40000");
+  const [isCreating, setIsCreating] = useState(false);
+  const [createSuccess, setCreateSuccess] = useState(false);
 
   async function createMarket(e: React.FormEvent) {
     e.preventDefault();
-    // TODO: Implement actual contract call to create market
-    alert(`Creating market: ${question}\nDeadline: ${deadline}`);
+    setIsCreating(true);
+    setCreateSuccess(false);
+    
+    try {
+      const deadlineTimestamp = BigInt(Math.floor(new Date(deadline).getTime() / 1000));
+      const targetPriceBigInt = BigInt(targetPrice);
+      
+      const tx = await createMarketContract(question, deadlineTimestamp, targetPriceBigInt);
+      console.log("Market creation tx:", tx);
+      
+      setCreateSuccess(true);
+      // Reset form
+      setQuestion("");
+      setDeadline("");
+      setTargetPrice("40000");
+      
+      setTimeout(() => setCreateSuccess(false), 5000);
+    } catch (error) {
+      console.error("Error creating market:", error);
+      alert(`Failed to create market: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setIsCreating(false);
+    }
   }
 
   async function resolveMarket(e: React.FormEvent) {
@@ -168,11 +196,21 @@ export default function AdminPage() {
                 />
               </div>
 
+              {createSuccess && (
+                <div className="p-3 bg-[#0FA958]/10 border border-[#0FA958]/20 rounded-xl text-sm text-[#0FA958] flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Market created successfully!
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-[#0FA958] to-[#19C37D] hover:from-[#0FA958]/90 hover:to-[#19C37D]/90 text-white font-semibold py-4 rounded-xl transition-all transform hover:scale-[1.02] shadow-lg shadow-[#0FA958]/30"
+                disabled={isCreating}
+                className="w-full bg-gradient-to-r from-[#0FA958] to-[#19C37D] hover:from-[#0FA958]/90 hover:to-[#19C37D]/90 text-white font-semibold py-4 rounded-xl transition-all transform hover:scale-[1.02] shadow-lg shadow-[#0FA958]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                Create Market
+                {isCreating ? "Creating..." : "Create Market"}
               </button>
             </form>
           </div>
