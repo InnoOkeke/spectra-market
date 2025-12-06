@@ -81,7 +81,7 @@ const deployedContracts = {
       deployedOnBlock: 9782182,
     },
     PredictionMarket: {
-      address: "0xC644caC3579CE20f4f115FE177B4eB2f23e6712f",
+      address: "0x688ABf683AC68B5d5a10f633E7dc7ED6b11cfe8e",
       abi: [
         {
           inputs: [
@@ -323,6 +323,19 @@ const deployedContracts = {
           type: "function",
         },
         {
+          inputs: [],
+          name: "getMarketCount",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
           inputs: [
             {
               internalType: "uint256",
@@ -429,7 +442,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 9782181,
+      deployedOnBlock: 9782264,
     },
   },
 } as const;
