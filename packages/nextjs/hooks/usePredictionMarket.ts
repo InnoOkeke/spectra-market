@@ -22,43 +22,43 @@ export const usePredictionMarket = () => {
     });
   };
 
-  const createMarket = async (args: any[]) => {
+  const createMarket = async (question: string, deadline: bigint, targetPrice: bigint) => {
     if (!contractInfo) throw new Error("Contract not loaded");
     return writeContractAsync({
       address: contractInfo.address,
       abi: contractInfo.abi,
       functionName: "createMarket",
-      args,
+      args: [question, deadline, targetPrice] as const,
     });
   };
 
-  const placeBet = async (args: any[]) => {
+  const placeBet = async (marketId: bigint, handles: `0x${string}`, inputProof: `0x${string}`) => {
     if (!contractInfo) throw new Error("Contract not loaded");
     return writeContractAsync({
       address: contractInfo.address,
       abi: contractInfo.abi,
-      functionName: "placeBet",
-      args,
+      functionName: "placeEncryptedBet",
+      args: [marketId, handles, inputProof] as const,
     });
   };
 
-  const resolveMarket = async (args: any[]) => {
+  const resolveMarket = async (marketId: bigint, aggregatedHandles: `0x${string}`, inputProof: `0x${string}`, winningSide: boolean) => {
     if (!contractInfo) throw new Error("Contract not loaded");
     return writeContractAsync({
       address: contractInfo.address,
       abi: contractInfo.abi,
       functionName: "resolveMarket",
-      args,
+      args: [marketId, aggregatedHandles, inputProof, winningSide] as const,
     });
   };
 
-  const claimWinnings = async (args: any[]) => {
+  const claimWinnings = async (marketId: bigint) => {
     if (!contractInfo) throw new Error("Contract not loaded");
     return writeContractAsync({
       address: contractInfo.address,
       abi: contractInfo.abi,
       functionName: "claimWinnings",
-      args,
+      args: [marketId] as const,
     });
   };
 
