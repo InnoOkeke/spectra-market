@@ -18,18 +18,6 @@ interface MarketData {
   awayTeam?: string;
 }
 
-// Generate static paths for all markets (for static export)
-export function generateStaticParams() {
-  // Pre-generate paths for crypto markets (0-2) and common sports market IDs
-  const marketIds = [
-    '0', '1', '2', // Crypto markets
-    'sport-1', 'sport-2', 'sport-3', 'sport-4', 'sport-5', // Sports markets
-    'sport-6', 'sport-7', 'sport-8', 'sport-9', 'sport-10'
-  ];
-  
-  return marketIds.map((id) => ({ id }));
-}
-
 export default function MarketDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { address, isConnected } = useAccount();
