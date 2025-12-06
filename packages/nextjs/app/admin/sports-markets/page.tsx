@@ -62,11 +62,14 @@ export default function SportsMarketsAdminPage() {
       const deadlineDate = new Date(event.deadline);
       const deadlineTimestamp = BigInt(Math.floor(deadlineDate.getTime() / 1000));
 
+      // Sports markets use category 2 (Sports)
+      const categoryId = BigInt(2);
+      
       // For sports markets, we don't use target price in the traditional sense
       // We can use it to store the event type or leave it as 0
       const targetPrice = BigInt(0);
 
-      const tx = await createMarketContract(event.question, deadlineTimestamp, targetPrice);
+      const tx = await createMarketContract(event.question, categoryId, deadlineTimestamp, targetPrice);
       console.log("Sports market creation tx:", tx);
 
       // Get the current market count to determine the new market ID
