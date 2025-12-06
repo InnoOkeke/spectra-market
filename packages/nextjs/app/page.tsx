@@ -23,7 +23,7 @@ export default function Home() {
   const [isSportsLoading, setIsSportsLoading] = useState(true);
   const { marketCount } = usePredictionMarket();
   
-  const { markets, isLoading: isMarketsLoading } = useMarkets(marketCount);
+  const { markets, isLoading: isMarketsLoading } = useMarkets(typeof marketCount === 'bigint' ? marketCount : undefined);
 
   // Filter markets by category
   const filteredMarkets = useMemo(() => {
