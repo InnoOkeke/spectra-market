@@ -6,14 +6,15 @@ export const usePredictionMarket = () => {
   
   const { writeContractAsync } = useWriteContract();
 
-  // Read functions
   const { data: marketCount } = useReadContract({
     address: contractInfo?.address,
     abi: contractInfo?.abi,
     functionName: "getMarketCount",
+    query: {
+      enabled: !!contractInfo?.address,
+    },
   });
 
-  // Helper function to get market - returns the contract info for manual reading
   const getMarketInfo = () => ({
     address: contractInfo?.address,
     abi: contractInfo?.abi,

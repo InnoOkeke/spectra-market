@@ -14,7 +14,6 @@ export default function Home() {
   const { marketCount } = usePredictionMarket();
 
   useEffect(() => {
-    // Fetch sports markets and filter only those created on-chain
     fetchUpcomingSportsEvents().then(events => {
       const mappings = getSportsMarketMappings();
       const onChainSportsMarkets = events.filter(event => 
@@ -24,8 +23,8 @@ export default function Home() {
     }).finally(() => setIsLoading(false));
   }, []);
 
-  // Generate array of market IDs from marketCount
-  const marketIds = marketCount ? Array.from({ length: Number(marketCount) }, (_, i) => i) : [];
+  const totalMarketCount = marketCount ? Number(marketCount) : 0;
+  const marketIds = totalMarketCount > 0 ? Array.from({ length: totalMarketCount }, (_, i) => i) : [];
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
@@ -117,7 +116,7 @@ export default function Home() {
 
         <div className="grid gap-6">
           {activeTab === "crypto" ? (
-            !marketCount || marketIds.length === 0 ? (
+            marketIds.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
                 <p className="text-gray-600 mb-4">No crypto markets available yet.</p>
                 <p className="text-sm text-gray-500">Create the first market or check back soon!</p>

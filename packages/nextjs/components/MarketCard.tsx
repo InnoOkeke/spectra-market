@@ -14,6 +14,9 @@ export function MarketCard({ marketId }: MarketCardProps) {
     abi: contractInfo?.abi,
     functionName: "getMarket",
     args: [BigInt(marketId)],
+    query: {
+      enabled: !!contractInfo?.address,
+    },
   });
 
   if (isLoading) {
