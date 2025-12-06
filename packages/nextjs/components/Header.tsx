@@ -2,17 +2,13 @@
 
 import React, { useRef } from "react";
 import Link from "next/link";
-import { useAccount } from "wagmi";
 import { RainbowKitCustomConnectButton } from "~~/components/helper";
 import { useOutsideClick } from "~~/hooks/helper";
-import { isAdmin } from "~~/utils/adminConfig";
 
 /**
  * Site header
  */
 export const Header = () => {
-  const { address } = useAccount();
-  const userIsAdmin = isAdmin(address);
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
   useOutsideClick(burgerMenuRef, () => {
     burgerMenuRef?.current?.removeAttribute("open");
@@ -33,7 +29,7 @@ export const Header = () => {
               <div className="text-xs text-gray-400 -mt-1">Encrypted Markets</div>
             </div>
           </Link>
-          
+
           <div className="flex items-center gap-6">
             <RainbowKitCustomConnectButton />
           </div>

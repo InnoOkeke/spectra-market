@@ -69,12 +69,22 @@ export const Footer = () => {
             <h3 className="text-white font-semibold mb-4">Resources</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="https://docs.zama.ai/fhevm" target="_blank" rel="noopener noreferrer" className="hover:text-[#0FA958] transition-colors">
+                <a
+                  href="https://docs.zama.ai/fhevm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#0FA958] transition-colors"
+                >
                   FHEVM Docs
                 </a>
               </li>
               <li>
-                <a href="https://github.com/zama-ai" target="_blank" rel="noopener noreferrer" className="hover:text-[#0FA958] transition-colors">
+                <a
+                  href="https://github.com/zama-ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#0FA958] transition-colors"
+                >
                   GitHub
                 </a>
               </li>
@@ -89,13 +99,17 @@ export const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="text-sm text-gray-500">
-            © 2025 Spectra. All rights reserved. Built with Zama FHEVM.
-          </div>
+          <div className="text-sm text-gray-500">© 2025 Spectra. All rights reserved. Built with Zama FHEVM.</div>
           <div className="flex gap-6 text-sm">
-            <a href="#" className="hover:text-[#0FA958] transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-[#0FA958] transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-[#0FA958] transition-colors">Contact</a>
+            <a href="#" className="hover:text-[#0FA958] transition-colors">
+              Privacy Policy
+            </a>
+            <a href="#" className="hover:text-[#0FA958] transition-colors">
+              Terms of Service
+            </a>
+            <a href="#" className="hover:text-[#0FA958] transition-colors">
+              Contact
+            </a>
           </div>
         </div>
       </div>
