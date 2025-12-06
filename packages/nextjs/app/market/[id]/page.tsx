@@ -6,6 +6,7 @@ import { useFheHelpers } from "~~/utils/fhe";
 import { fetchUpcomingSportsEvents, getSportIcon } from "~~/utils/sportsApi";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
+import { toHex } from "viem";
 
 interface MarketData {
   id: string | number;
@@ -118,32 +119,37 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       });
 
       // Encrypt the bet data using Zama FHEVM
-      if (encryptBet && placeBetContract) {
-        const enc = await encryptBet((builder: any) => {
-          builder.add64(BigInt(Math.floor(Number(amount) * 1e18)));
-          builder.addBool(side === "yes");
-        });
-        console.log("Encrypted payload:", enc);
-
-        // Call the smart contract's placeEncryptedBet function
-        const tx = await placeBetContract(
-          BigInt(id),
-          enc.handles as `0x${string}`,
-          enc.inputProof as `0x${string}`
-        );
-        
-        console.log("Transaction submitted:", tx);
-
-        setBetPlaced(true);
-
-        // Reset form after 3 seconds
-        setTimeout(() => {
-          setBetPlaced(false);
-          setAmount("0.01");
-        }, 3000);
-      } else {
+      if (!encryptBet || !placeBetContract) {
         throw new Error("Encryption or contract not available");
       }
+
+      const enc = await encryptBet((builder: any) => {
+        builder.add64(BigInt(Math.floor(Number(amount) * 1e18)));
+        builder.addBool(side === "yes");
+      });
+      
+      if (!enc || !enc.handles || !enc.inputProof) {
+        throw new Error("Encryption failed");
+      }
+      
+      console.log("Encrypted payload:", enc);
+
+      // Call the smart contract's placeEncryptedBet function
+      const tx = await placeBetContract(
+        BigInt(id),
+        toHex(enc.handles[0]) as `0x${string}`,
+        toHex(enc.inputProof) as `0x${string}`
+      );
+      
+      console.log("Transaction submitted:", tx);
+
+      setBetPlaced(true);
+
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setBetPlaced(false);
+        setAmount("0.01");
+      }, 3000);
     } catch (error) {
       console.error("Error placing bet:", error);
       alert("Failed to place bet. Please try again.");
