@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { type SportsMarket, fetchUpcomingSportsEvents, getSportIcon } from "~~/utils/sportsApi";
+import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
 
 interface Market {
   id: string | number;
@@ -16,40 +17,48 @@ interface Market {
 
 export default function Home() {
   const [sportsMarkets, setSportsMarkets] = useState<SportsMarket[]>([]);
+  const [cryptoMarkets, setCryptoMarkets] = useState<Market[]>([]);
   const [activeTab, setActiveTab] = useState<"crypto" | "sports">("crypto");
+  const [isLoading, setIsLoading] = useState(true);
+  const { contract, getMarket } = usePredictionMarket();
 
   useEffect(() => {
-    // Fetch sports markets on mount
+    // Fetch sports markets
     fetchUpcomingSportsEvents().then(setSportsMarkets);
-  }, []);
-
-  // Crypto markets
-  const cryptoMarkets: Market[] = [
-    {
-      id: 0,
-      question: "Will BTC be >= $40k on 2026-01-01?",
-      deadline: "2026-01-01",
-      volume: "125.5 ETH",
-      participants: 234,
-      category: "Crypto",
-    },
-    {
-      id: 1,
-      question: "Will ETH reach $3000 by end of Q1 2026?",
-      deadline: "2026-03-31",
-      volume: "89.2 ETH",
-      participants: 156,
-      category: "Crypto",
-    },
-    {
-      id: 2,
-      question: "Will S&P 500 exceed 5000 points in 2026?",
-      deadline: "2026-12-31",
-      volume: "203.8 ETH",
-      participants: 421,
-      category: "Finance",
-    },
-  ];
+    
+    // Fetch crypto markets from contract
+    const fetchCryptoMarkets = async () => {
+      if (!contract) return;
+      
+      try {
+        const marketCount = await contract.read.getMarketCount();
+        const markets: Market[] = [];
+        
+        for (let i = 0; i < Number(marketCount); i++) {
+          const { data: marketData } = getMarket(i);
+          if (marketData) {
+            const [question, deadline] = marketData;
+            markets.push({
+              id: i,
+              question,
+              deadline: new Date(Number(deadline) * 1000).toLocaleDateString(),
+              volume: "0 ETH", // Can be fetched from events
+              participants: 0, // Can be fetched from events
+              category: question.includes("BTC") || question.includes("ETH") ? "Crypto" : "Finance",
+            });
+          }
+        }
+        
+        setCryptoMarkets(markets);
+      } catch (error) {
+        console.error("Error fetching markets:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchCryptoMarkets();
+  }, [contract]);
 
   const displayMarkets = activeTab === "crypto" ? cryptoMarkets : sportsMarkets;
 
@@ -142,7 +151,17 @@ export default function Home() {
         </div>
 
         <div className="grid gap-6">
-          {displayMarkets.map((m) => (
+          {isLoading && activeTab === "crypto" ? (
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-[#0FA958] border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading markets from blockchain...</p>
+            </div>
+          ) : displayMarkets.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+              <p className="text-gray-600">No markets available yet.</p>
+            </div>
+          ) : (
+            displayMarkets.map((m) => (
             <Link
               key={m.id}
               href={`/market/${m.id}`}
@@ -212,7 +231,8 @@ export default function Home() {
                 <span className="text-[#0FA958] group-hover:translate-x-1 transition-transform">→</span>
               </div>
             </Link>
-          ))}
+          ))
+          )}
         </div>
 
         {/* Features Section */}

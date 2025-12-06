@@ -10,9 +10,6 @@ export default function AdminPage() {
   const { address, isConnected } = useAccount();
   const userIsAdmin = isAdmin(address);
   const { createMarket: createMarketContract } = usePredictionMarket();
-  
-  // Debug logging
-  console.log("Admin check:", { address, userIsAdmin, isAdmin: isAdmin(address) });
 
   const [marketId, setMarketId] = useState("0");
   const [question, setQuestion] = useState("");

@@ -12,7 +12,5 @@ export const ADMIN_ADDRESSES = [
  */
 export function isAdmin(address: string | undefined): boolean {
   if (!address) return false;
-  const result = ADMIN_ADDRESSES.some(admin => admin.toLowerCase() === address.toLowerCase());
-  console.log("isAdmin check:", { address, ADMIN_ADDRESSES, result });
-  return result;
+  return ADMIN_ADDRESSES.some(admin => admin.toLowerCase() === address.toLowerCase());
 }

@@ -45,15 +45,6 @@ export const Balance = ({ address, className = "" }: BalanceProps) => {
   }
 
   const formattedBalance = balance ? Number(formatEther(balance.value)) : 0;
-  
-  console.log("Balance debug:", { 
-    address, 
-    chainId: targetNetwork.id,
-    balance: balance?.value?.toString(), 
-    formattedBalance,
-    isLoading,
-    isError 
-  });
 
   return (
     <div className={`flex flex-col font-normal items-center ${className}`}>
