@@ -4,6 +4,8 @@ import { use, useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useFheHelpers } from "~~/utils/fhe";
 import { fetchUpcomingSportsEvents, getSportIcon } from "~~/utils/sportsApi";
+import deployedContracts from "~~/contracts/deployedContracts";
+import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
 
 interface MarketData {
   id: string | number;
@@ -26,6 +28,11 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [betPlaced, setBetPlaced] = useState(false);
+  
+  const { placeBet: placeBetContract } = usePredictionMarket();
+  
+  // Get PredictionMarket contract address from deployed contracts
+  const contractAddress = deployedContracts[11155111]?.PredictionMarket?.address as `0x${string}` | undefined;
 
   useEffect(() => {
     // Access window only on client side
@@ -78,7 +85,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
     loadMarketData();
   }, [id]);
 
-  const { encryptBet } = useFheHelpers({ instance, signer: undefined, contractAddress: undefined as any });
+  const { encryptBet } = useFheHelpers({ instance, signer: undefined, contractAddress });
 
   async function placeBet(e: React.FormEvent) {
     e.preventDefault();
@@ -94,16 +101,15 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       alert("Please enter a valid amount");
       return;
     }
+    
+    if (!contractAddress) {
+      alert("Contract address not found. Please check network.");
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
-      // For demo purposes, simulate bet placement
-      // In production, this would:
-      // 1. Encrypt the bet data using Zama FHEVM
-      // 2. Call the smart contract's placeEncryptedBet function
-      // 3. Wait for transaction confirmation
-
       console.log("Placing bet:", {
         marketId: id,
         amount: amount,
@@ -111,25 +117,33 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
         address: address,
       });
 
-      // Simulate encryption and contract call
-      if (encryptBet) {
+      // Encrypt the bet data using Zama FHEVM
+      if (encryptBet && placeBetContract) {
         const enc = await encryptBet((builder: any) => {
-          builder.add64(BigInt(Math.floor(Number(amount) * 1e18)).toString());
+          builder.add64(BigInt(Math.floor(Number(amount) * 1e18)));
           builder.addBool(side === "yes");
         });
         console.log("Encrypted payload:", enc);
+
+        // Call the smart contract's placeEncryptedBet function
+        const tx = await placeBetContract(
+          BigInt(id),
+          enc.handles as `0x${string}`,
+          enc.inputProof as `0x${string}`
+        );
+        
+        console.log("Transaction submitted:", tx);
+
+        setBetPlaced(true);
+
+        // Reset form after 3 seconds
+        setTimeout(() => {
+          setBetPlaced(false);
+          setAmount("0.01");
+        }, 3000);
+      } else {
+        throw new Error("Encryption or contract not available");
       }
-
-      // Simulate transaction delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      setBetPlaced(true);
-
-      // Reset form after 3 seconds
-      setTimeout(() => {
-        setBetPlaced(false);
-        setAmount("0.01");
-      }, 3000);
     } catch (error) {
       console.error("Error placing bet:", error);
       alert("Failed to place bet. Please try again.");
