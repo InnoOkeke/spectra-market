@@ -4,63 +4,21 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { type SportsMarket, fetchUpcomingSportsEvents, getSportIcon } from "~~/utils/sportsApi";
 import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
-
-interface Market {
-  id: string | number;
-  question: string;
-  deadline: string;
-  volume: string;
-  participants: number;
-  category?: string;
-  sport?: string;
-}
+import { MarketCard } from "~~/components/MarketCard";
 
 export default function Home() {
   const [sportsMarkets, setSportsMarkets] = useState<SportsMarket[]>([]);
-  const [cryptoMarkets, setCryptoMarkets] = useState<Market[]>([]);
   const [activeTab, setActiveTab] = useState<"crypto" | "sports">("crypto");
   const [isLoading, setIsLoading] = useState(true);
-  const { contract, getMarket } = usePredictionMarket();
+  const { marketCount } = usePredictionMarket();
 
   useEffect(() => {
     // Fetch sports markets
-    fetchUpcomingSportsEvents().then(setSportsMarkets);
-    
-    // Fetch crypto markets from contract
-    const fetchCryptoMarkets = async () => {
-      if (!contract) return;
-      
-      try {
-        const marketCount = await contract.read.getMarketCount();
-        const markets: Market[] = [];
-        
-        for (let i = 0; i < Number(marketCount); i++) {
-          const { data: marketData } = getMarket(i);
-          if (marketData) {
-            const [question, deadline] = marketData;
-            markets.push({
-              id: i,
-              question,
-              deadline: new Date(Number(deadline) * 1000).toLocaleDateString(),
-              volume: "0 ETH", // Can be fetched from events
-              participants: 0, // Can be fetched from events
-              category: question.includes("BTC") || question.includes("ETH") ? "Crypto" : "Finance",
-            });
-          }
-        }
-        
-        setCryptoMarkets(markets);
-      } catch (error) {
-        console.error("Error fetching markets:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchCryptoMarkets();
-  }, [contract]);
+    fetchUpcomingSportsEvents().then(setSportsMarkets).finally(() => setIsLoading(false));
+  }, []);
 
-  const displayMarkets = activeTab === "crypto" ? cryptoMarkets : sportsMarkets;
+  // Generate array of market IDs from marketCount
+  const marketIds = marketCount ? Array.from({ length: Number(marketCount) }, (_, i) => i) : [];
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
@@ -109,7 +67,7 @@ export default function Home() {
             </div>
             <div className="bg-white/10 backdrop-blur-sm border border-[#FFD534]/20 rounded-2xl p-6 text-center">
               <div className="text-3xl font-bold text-[#FFD534] mb-2">
-                {cryptoMarkets.length + sportsMarkets.length}
+                {marketIds.length + sportsMarkets.length}
               </div>
               <div className="text-gray-400">Live Markets</div>
             </div>
@@ -151,87 +109,93 @@ export default function Home() {
         </div>
 
         <div className="grid gap-6">
-          {isLoading && activeTab === "crypto" ? (
+          {activeTab === "crypto" ? (
+            marketIds.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+                <p className="text-gray-600">No crypto markets available yet.</p>
+              </div>
+            ) : (
+              marketIds.map((id) => <MarketCard key={id} marketId={id} />)
+            )
+          ) : isLoading ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
               <div className="animate-spin w-8 h-8 border-4 border-[#0FA958] border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading markets from blockchain...</p>
+              <p className="text-gray-600">Loading sports markets...</p>
             </div>
-          ) : displayMarkets.length === 0 ? (
+          ) : sportsMarkets.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-              <p className="text-gray-600">No markets available yet.</p>
+              <p className="text-gray-600">No sports markets available yet.</p>
             </div>
           ) : (
-            displayMarkets.map((m) => (
-            <Link
-              key={m.id}
-              href={`/market/${m.id}`}
-              className="group relative bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#0FA958]/50 rounded-2xl p-6 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl hover:shadow-[#0FA958]/20"
-            >
-              <div className="absolute top-4 right-4 flex items-center gap-2">
-                {activeTab === "sports" && "sport" in m && (
+            sportsMarkets.map((m) => (
+              <Link
+                key={m.id}
+                href={`/market/${m.id}`}
+                className="group relative bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#0FA958]/50 rounded-2xl p-6 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl hover:shadow-[#0FA958]/20"
+              >
+                <div className="absolute top-4 right-4 flex items-center gap-2">
                   <span className="px-3 py-1 bg-[#FFD534]/20 text-[#111111] rounded-full text-sm font-medium border border-[#FFD534]/30">
-                    {getSportIcon(m.sport!)} {m.sport}
+                    {getSportIcon(m.sport)} {m.sport}
                   </span>
-                )}
-                <span className="px-3 py-1 bg-[#19C37D]/20 text-[#19C37D] rounded-full text-sm font-medium border border-[#19C37D]/30">
-                  Active
-                </span>
-              </div>
+                  <span className="px-3 py-1 bg-[#19C37D]/20 text-[#19C37D] rounded-full text-sm font-medium border border-[#19C37D]/30">
+                    Active
+                  </span>
+                </div>
 
-              <div className="mb-4">
-                <h3 className="text-xl font-semibold mb-2 text-[#111111] group-hover:text-[#0FA958] transition-colors">
-                  {m.question}
-                </h3>
-                <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span>Ends: {m.deadline}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                    <span>Volume: {m.volume}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                    <span>{m.participants} participants</span>
+                <div className="mb-4">
+                  <h3 className="text-xl font-semibold mb-2 text-[#111111] group-hover:text-[#0FA958] transition-colors">
+                    {m.question}
+                  </h3>
+                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span>Ends: {m.deadline}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                        />
+                      </svg>
+                      <span>Volume: {m.volume}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                        />
+                      </svg>
+                      <span>{m.participants} participants</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                <div className="flex gap-2">
-                  <div className="px-3 py-1 bg-[#0FA958]/10 text-[#0FA958] rounded-lg text-xs font-medium border border-[#0FA958]/20">
-                    🔐 Encrypted
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                  <div className="flex gap-2">
+                    <div className="px-3 py-1 bg-[#0FA958]/10 text-[#0FA958] rounded-lg text-xs font-medium border border-[#0FA958]/20">
+                      🔐 Encrypted
+                    </div>
+                    <div className="px-3 py-1 bg-[#FFD534]/10 text-[#111111] rounded-lg text-xs font-medium border border-[#FFD534]/20">
+                      ⚡ Instant Settlement
+                    </div>
                   </div>
-                  <div className="px-3 py-1 bg-[#FFD534]/10 text-[#111111] rounded-lg text-xs font-medium border border-[#FFD534]/20">
-                    ⚡ Instant Settlement
-                  </div>
+                  <span className="text-[#0FA958] group-hover:translate-x-1 transition-transform">→</span>
                 </div>
-                <span className="text-[#0FA958] group-hover:translate-x-1 transition-transform">→</span>
-              </div>
-            </Link>
-          ))
+              </Link>
+            ))
           )}
         </div>
 
