@@ -79,13 +79,14 @@ export const usePredictionMarket = () => {
     });
   };
 
-  const placeBet = async (marketId: bigint, encryptedData: `0x${string}`, inputProof: `0x${string}`, side: boolean) => {
+  const placeBet = async (marketId: bigint, encryptedData: `0x${string}`, inputProof: `0x${string}`, side: boolean, value: bigint) => {
     if (!contractInfo) throw new Error("Contract not loaded");
     return writeContractAsync({
       address: contractInfo.address,
       abi: contractInfo.abi,
       functionName: "placeEncryptedBet",
       args: [marketId, encryptedData, inputProof, side] as const,
+      value, // Send ETH with the transaction
       gas: 500000n, // Set reasonable gas limit for encrypted operations
     });
   };

@@ -147,13 +147,15 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
 
       const marketId = BigInt(id);
       const betSide = side === "yes";
+      const betValue = BigInt(Math.floor(Number(amount) * 1e18));
       
       // Send the encrypted data as bytes (not bytes32)
       await placeBetContract(
         marketId,
         toHex(enc.handles[0]) as `0x${string}`,
         toHex(enc.inputProof) as `0x${string}`,
-        betSide
+        betSide,
+        betValue
       );
 
       setBetPlaced(true);
