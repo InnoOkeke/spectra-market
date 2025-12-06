@@ -2,22 +2,25 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePublicClient } from "wagmi";
 import { type SportsMarket, fetchUpcomingSportsEvents, getSportIcon } from "~~/utils/sportsApi";
 import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
-import { useDeployedContractInfo, useSelectedNetwork } from "~~/hooks/helper";
+import { useMarkets } from "~~/hooks/useMarkets";
 import { MarketCard } from "~~/components/MarketCard";
 import { getOnChainMarketId, getSportsMarketMappings } from "~~/utils/sportsMarketMapping";
 
 export default function Home() {
   const [sportsMarkets, setSportsMarkets] = useState<SportsMarket[]>([]);
-  const [marketIds, setMarketIds] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<"crypto" | "sports">("crypto");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isSportsLoading, setIsSportsLoading] = useState(true);
   const { marketCount } = usePredictionMarket();
-  const selectedNetwork = useSelectedNetwork();
-  const publicClient = usePublicClient({ chainId: selectedNetwork.id });
-  const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarket" });
+  
+  const { markets, isLoading: isMarketsLoading } = useMarkets(marketCount);
+
+  useEffect(() => {
+    console.log('DEBUG: marketCount =', marketCount?.toString());
+    console.log('DEBUG: markets =', markets);
+    console.log('DEBUG: isMarketsLoading =', isMarketsLoading);
+  }, [marketCount, markets, isMarketsLoading]);
 
   useEffect(() => {
     fetchUpcomingSportsEvents().then(events => {
@@ -26,25 +29,8 @@ export default function Home() {
         mappings.some(m => m.sportsEventId === event.id)
       );
       setSportsMarkets(onChainSportsMarkets);
-    }).finally(() => setIsLoading(false));
+    }).finally(() => setIsSportsLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (!contractInfo?.address || !publicClient) return;
-    (async () => {
-      try {
-        const count = await publicClient.readContract({
-          address: contractInfo.address,
-          abi: contractInfo.abi,
-          functionName: "getMarketCount",
-        });
-        const n = Number(count || 0);
-        setMarketIds(n > 0 ? Array.from({ length: n }, (_, i) => i) : []);
-      } catch {
-        setMarketIds([]);
-      }
-    })();
-  }, [contractInfo, publicClient]);
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
@@ -120,15 +106,20 @@ export default function Home() {
 
         <div className="grid gap-6">
           {activeTab === "crypto" ? (
-            marketIds.length === 0 ? (
+            isMarketsLoading ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+                <div className="animate-spin w-8 h-8 border-4 border-[#0FA958] border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading markets...</p>
+              </div>
+            ) : markets.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
                 <p className="text-gray-600 mb-4">No crypto markets available yet.</p>
                 <p className="text-sm text-gray-500">Create the first market or check back soon!</p>
               </div>
             ) : (
-              marketIds.map((id) => <MarketCard key={id} marketId={id} />)
+              markets.map((market) => <MarketCard key={market.id} market={market} />)
             )
-          ) : isLoading ? (
+          ) : isSportsLoading ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
               <div className="animate-spin w-8 h-8 border-4 border-[#0FA958] border-t-transparent rounded-full mx-auto mb-4"></div>
               <p className="text-gray-600">Loading sports markets...</p>

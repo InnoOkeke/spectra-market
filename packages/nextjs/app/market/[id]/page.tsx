@@ -59,30 +59,14 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
     chainId: chain?.id || 11155111, // Default to Sepolia
   });
   
-  // Get ethers signer
   const { ethersSigner } = useWagmiEthers();
-  
   const { encryptBet } = useFheHelpers({ instance, signer: ethersSigner, contractAddress });
-  
-  // Log initialization status
-  useEffect(() => {
-    console.log("FHEVM Initialization Status:", {
-      hasInstance: !!instance,
-      hasEthersSigner: !!ethersSigner,
-      hasContractAddress: !!contractAddress,
-      hasProvider: !!provider,
-      chainId: chain?.id,
-      isConnected,
-    });
-  }, [instance, ethersSigner, contractAddress, provider, chain?.id, isConnected]);
 
   useEffect(() => {
-    // Load market data from contract
     async function loadMarketData() {
       try {
         const marketId = parseInt(id);
         if (isNaN(marketId)) {
-          // Handle sports markets
           if (id.startsWith("sport-")) {
             const sportsMarkets = await fetchUpcomingSportsEvents();
             const market = sportsMarkets.find(m => m.id === id);
@@ -91,36 +75,78 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
           return;
         }
 
-        // Use the contract data from the hook
         if (contractMarketData && Array.isArray(contractMarketData)) {
-          const [question, deadline] = contractMarketData as [string, bigint, ...any[]];
+          const [question, deadline, creator, resolved, winningSide] = contractMarketData as [
+            string,
+            bigint,
+            string,
+            boolean,
+            boolean,
+            ...any[]
+          ];
+
+          // Fetch bet events to count participants
+          let participantCount = 0;
+          if (marketInfo.address) {
+            try {
+              const { createPublicClient, http } = await import('viem');
+              const { sepolia } = await import('viem/chains');
+              
+              const publicClient = createPublicClient({
+                chain: sepolia,
+                transport: http('https://rpc.sepolia.org'),
+              });
+
+              console.log('Fetching BetPlaced events for market', marketId);
+              
+              const logs = await publicClient.getContractEvents({
+                address: marketInfo.address!,
+                abi: marketInfo.abi!,
+                eventName: 'BetPlaced',
+                args: {
+                  marketId: BigInt(marketId),
+                },
+                fromBlock: BigInt(7250000), // Start from a recent block to speed up query
+                toBlock: 'latest',
+              });
+
+              console.log('BetPlaced events found:', logs.length);
+
+              // Count unique participants
+              const uniqueUsers = new Set(logs.map((log: any) => log.args.user?.toLowerCase()));
+              participantCount = uniqueUsers.size;
+              
+              console.log('Unique participants:', participantCount);
+            } catch (e) {
+              console.error('Failed to fetch bet events:', e);
+            }
+          }
+
           setMarketData({
             id: marketId,
             question,
             deadline: new Date(Number(deadline) * 1000).toLocaleDateString(),
-            volume: "0 ETH", // Live volume tracking would require event parsing
-            participants: 0, // Live participant tracking would require event parsing
+            volume: participantCount > 0 ? `${participantCount} bet${participantCount !== 1 ? 's' : ''}` : "No bets yet",
+            participants: participantCount,
             category: question.includes("BTC") || question.includes("ETH") ? "Crypto" : "Finance",
           });
         }
       } catch (error) {
-        console.error("Error loading market:", error);
+        console.error('Error loading market data:', error);
       }
     }
 
     loadMarketData();
-  }, [id, contractMarketData]);
+  }, [id, contractMarketData, marketInfo.address, marketInfo.abi]);
 
   async function placeBet(e: React.FormEvent) {
     e.preventDefault();
 
-    // Check wallet connection
     if (!isConnected) {
       alert("Please connect your wallet first");
       return;
     }
 
-    // Validate amount
     if (!amount || Number(amount) <= 0) {
       alert("Please enter a valid amount");
       return;
@@ -131,39 +157,21 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       return;
     }
     
-    // Check FHEVM initialization
     if (!instance) {
       alert("FHEVM instance not initialized. Please wait and try again.");
-      console.error("Missing FHEVM instance");
       return;
     }
     
     if (!ethersSigner) {
       alert("Wallet signer not available. Please ensure wallet is connected.");
-      console.error("Missing ethers signer");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      console.log("Debug info:", {
-        marketId: id,
-        amount: amount,
-        side: side,
-        address: address,
-        contractAddress,
-        hasEncryptBet: !!encryptBet,
-        hasPlaceBetContract: !!placeBetContract,
-        hasInstance: !!instance,
-        hasEthersSigner: !!ethersSigner,
-        chainId: chain?.id,
-        providerExists: !!provider,
-      });
-
-      // Encrypt the bet data using Zama FHEVM
       if (!encryptBet || !placeBetContract) {
-        throw new Error(`Missing dependencies: encryptBet=${!!encryptBet}, placeBetContract=${!!placeBetContract}`);
+        throw new Error("Missing encryption or contract dependencies");
       }
 
       const enc = await encryptBet((builder: any) => {
@@ -174,31 +182,20 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       if (!enc || !enc.handles || !enc.inputProof) {
         throw new Error("Encryption failed");
       }
-      
-      console.log("Encrypted payload:", enc);
 
-      // Call the smart contract's placeEncryptedBet function
-      // handles[0] is the encrypted amount (as bytes32)
-      // inputProof is the proof (as bytes) 
-      // Convert Uint8Array to hex string using ethers
-      const marketId = BigInt(id); // Already validated as numeric earlier
-      const tx = await placeBetContract(
+      const marketId = BigInt(id);
+      await placeBetContract(
         marketId,
         toHex(enc.handles[0]) as `0x${string}`,
         toHex(enc.inputProof) as `0x${string}`
       );
-      
-      console.log("Transaction submitted:", tx);
 
       setBetPlaced(true);
-
-      // Reset form after 3 seconds
       setTimeout(() => {
         setBetPlaced(false);
         setAmount("0.001");
       }, 3000);
     } catch (error) {
-      console.error("Error placing bet:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       alert(`Failed to place bet: ${errorMessage}`);
     } finally {
