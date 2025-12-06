@@ -19,22 +19,15 @@ interface MarketData {
 }
 
 // Generate static paths for all markets (for static export)
-export async function generateStaticParams() {
-  // Pre-generate paths for crypto markets (0, 1, 2)
-  const cryptoMarkets = ['0', '1', '2'];
+export function generateStaticParams() {
+  // Pre-generate paths for crypto markets (0-2) and common sports market IDs
+  const marketIds = [
+    '0', '1', '2', // Crypto markets
+    'sport-1', 'sport-2', 'sport-3', 'sport-4', 'sport-5', // Sports markets
+    'sport-6', 'sport-7', 'sport-8', 'sport-9', 'sport-10'
+  ];
   
-  // Try to fetch sports markets, but don't fail if it doesn't work
-  let sportsMarkets: string[] = [];
-  try {
-    const sports = await fetchUpcomingSportsEvents();
-    sportsMarkets = sports.map(m => m.id.toString());
-  } catch (error) {
-    console.log('Could not fetch sports markets for static generation');
-  }
-  
-  return [...cryptoMarkets, ...sportsMarkets].map((id) => ({
-    id: id,
-  }));
+  return marketIds.map((id) => ({ id }));
 }
 
 export default function MarketDetails({ params }: { params: Promise<{ id: string }> }) {
