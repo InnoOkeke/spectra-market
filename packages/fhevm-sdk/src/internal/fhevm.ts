@@ -289,8 +289,17 @@ export const createFhevmInstance = async (parameters: {
     throw new Error(`Invalid address: ${aclAddress}`);
   }
 
-  const pub = await publicKeyStorageGet(aclAddress);
-  throwIfAborted();
+  let pub;
+  try {
+    pub = await publicKeyStorageGet(aclAddress);
+    throwIfAborted();
+  } catch (error) {
+    throwFhevmError(
+      "PUBLIC_KEY_FETCH_ERROR",
+      "Failed to retrieve public key from storage. This may indicate an issue with the FHEVM relayer endpoint.",
+      error
+    );
+  }
 
   const config: FhevmInstanceConfig = {
     ...relayerSDK.SepoliaConfig,
@@ -302,7 +311,16 @@ export const createFhevmInstance = async (parameters: {
   // notify that state === "creating"
   notify("creating");
 
-  const instance = await relayerSDK.createInstance(config);
+  let instance;
+  try {
+    instance = await relayerSDK.createInstance(config);
+  } catch (error) {
+    throwFhevmError(
+      "INSTANCE_CREATION_ERROR",
+      "Failed to create FHEVM instance. The relayer endpoint may be unreachable or misconfigured.",
+      error
+    );
+  }
 
   // Save the key even if aborted
   await publicKeyStorageSet(
