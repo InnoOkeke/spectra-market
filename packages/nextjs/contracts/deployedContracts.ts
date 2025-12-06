@@ -5,9 +5,9 @@
 import { GenericContractsDeclaration } from "~~/utils/helper/contract";
 
 const deployedContracts = {
-  31337: {
+  11155111: {
     FHECounter: {
-      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      address: "0x036bEBfa3aAd2354Ee958B53eBAeC2F02E0A672D",
       abi: [
         {
           inputs: [
@@ -73,10 +73,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 4,
+      deployedOnBlock: 9781034,
     },
     PredictionMarket: {
-      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      address: "0x0DE7233d5f13370dB632ca194fC2b1cA82e3C9C5",
       abi: [
         {
           inputs: [
@@ -419,7 +419,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3,
+      deployedOnBlock: 9781033,
     },
   },
 } as const;
