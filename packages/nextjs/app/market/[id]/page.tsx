@@ -31,7 +31,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [betPlaced, setBetPlaced] = useState(false);
   
-  const { placeBet: placeBetContract } = usePredictionMarket();
+  const { placeBet: placeBetContract, getMarket } = usePredictionMarket();
   
   // Get PredictionMarket contract address from deployed contracts
   const contractAddress = deployedContracts[11155111]?.PredictionMarket?.address as `0x${string}` | undefined;
@@ -65,50 +65,40 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
   }, [instance, ethersSigner, contractAddress, provider, chain?.id, isConnected]);
 
   useEffect(() => {
-    // Load market data based on ID
+    // Load market data from contract
     async function loadMarketData() {
-      // Crypto markets
-      const cryptoMarkets: MarketData[] = [
-        {
-          id: "0",
-          question: "Will BTC be >= $40k on 2026-01-01?",
-          deadline: "2026-01-01",
-          volume: "125.5 ETH",
-          participants: 234,
-          category: "Crypto",
-        },
-        {
-          id: "1",
-          question: "Will ETH reach $3000 by end of Q1 2026?",
-          deadline: "2026-03-31",
-          volume: "89.2 ETH",
-          participants: 156,
-          category: "Crypto",
-        },
-        {
-          id: "2",
-          question: "Will S&P 500 exceed 5000 points in 2026?",
-          deadline: "2026-12-31",
-          volume: "203.8 ETH",
-          participants: 421,
-          category: "Finance",
-        },
-      ];
+      try {
+        const marketId = parseInt(id);
+        if (isNaN(marketId)) {
+          // Handle sports markets
+          if (id.startsWith("sport-")) {
+            const sportsMarkets = await fetchUpcomingSportsEvents();
+            const market = sportsMarkets.find(m => m.id === id);
+            if (market) setMarketData(market);
+          }
+          return;
+        }
 
-      // Check if it's a crypto market
-      let market = cryptoMarkets.find(m => m.id.toString() === id);
-
-      // If not found, check sports markets
-      if (!market && id.startsWith("sport-")) {
-        const sportsMarkets = await fetchUpcomingSportsEvents();
-        market = sportsMarkets.find(m => m.id === id);
+        // Fetch from contract
+        const { data: contractMarketData } = getMarket(marketId);
+        if (contractMarketData) {
+          const [question, deadline] = contractMarketData;
+          setMarketData({
+            id: marketId,
+            question,
+            deadline: new Date(Number(deadline) * 1000).toLocaleDateString(),
+            volume: "0 ETH", // Live volume tracking would require event parsing
+            participants: 0, // Live participant tracking would require event parsing
+            category: question.includes("BTC") || question.includes("ETH") ? "Crypto" : "Finance",
+          });
+        }
+      } catch (error) {
+        console.error("Error loading market:", error);
       }
-
-      setMarketData(market || cryptoMarkets[0]); // Fallback to first market if not found
     }
 
     loadMarketData();
-  }, [id]);
+  }, [id, getMarket]);
 
   async function placeBet(e: React.FormEvent) {
     e.preventDefault();

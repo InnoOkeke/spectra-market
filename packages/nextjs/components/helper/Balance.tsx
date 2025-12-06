@@ -23,9 +23,13 @@ export const Balance = ({ address, className = "" }: BalanceProps) => {
   } = useWatchBalance({
     address,
     chainId: targetNetwork.id,
+    query: {
+      enabled: !!address,
+      refetchInterval: 4000, // Refetch every 4 seconds
+    },
   });
 
-  if (!address || isLoading || balance === null) {
+  if (!address || isLoading || balance === null || balance === undefined) {
     return (
       <div className="animate-pulse flex space-x-4">
         <div className="rounded-md bg-slate-300 h-6 w-6"></div>
@@ -44,7 +48,7 @@ export const Balance = ({ address, className = "" }: BalanceProps) => {
     );
   }
 
-  const formattedBalance = balance ? Number(formatEther(balance.value)) : 0;
+  const formattedBalance = balance?.value ? Number(formatEther(balance.value)) : 0;
 
   return (
     <div className={`flex flex-col font-normal items-center ${className}`}>
