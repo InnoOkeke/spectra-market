@@ -1,6 +1,7 @@
 import "@rainbow-me/rainbowkit/styles.css";
 import { DappWrapperWithProviders } from "~~/components/DappWrapperWithProviders";
 import { ThemeProvider } from "~~/components/ThemeProvider";
+import { Footer } from "~~/components/Footer";
 import "~~/styles/globals.css";
 import { getMetadata } from "~~/utils/helper/getMetadata";
 
@@ -20,7 +21,10 @@ const DappWrapper = ({ children }: { children: React.ReactNode }) => {
       </head>
       <body>
         <ThemeProvider enableSystem>
-          <DappWrapperWithProviders>{children}</DappWrapperWithProviders>
+          <DappWrapperWithProviders>
+            {children}
+            <Footer />
+          </DappWrapperWithProviders>
         </ThemeProvider>
       </body>
     </html>
