@@ -1,12 +1,14 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useMemo } from "react";
 import { useAccount } from "wagmi";
+import { useFhevm } from "@fhevm-sdk";
 import { useFheHelpers } from "~~/utils/fhe";
 import { fetchUpcomingSportsEvents, getSportIcon } from "~~/utils/sportsApi";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
 import { toHex } from "viem";
+import { useWagmiEthers } from "~~/hooks/wagmi/useWagmiEthers";
 
 interface MarketData {
   id: string | number;
@@ -22,10 +24,9 @@ interface MarketData {
 
 export default function MarketDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
   const [amount, setAmount] = useState("0.01");
   const [side, setSide] = useState("yes");
-  const [instance, setInstance] = useState<any>(null);
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [betPlaced, setBetPlaced] = useState(false);
@@ -34,13 +35,24 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
   
   // Get PredictionMarket contract address from deployed contracts
   const contractAddress = deployedContracts[11155111]?.PredictionMarket?.address as `0x${string}` | undefined;
+  
+  // Initialize FHEVM
+  const provider = useMemo(() => {
+    if (typeof window === "undefined") return undefined;
+    return (window as any).ethereum;
+  }, []);
+
+  const { instance } = useFhevm({
+    provider,
+    chainId: chain?.id || 11155111, // Default to Sepolia
+  });
+  
+  // Get ethers signer
+  const { ethersSigner } = useWagmiEthers();
+  
+  const { encryptBet } = useFheHelpers({ instance, signer: ethersSigner, contractAddress });
 
   useEffect(() => {
-    // Access window only on client side
-    if (typeof window !== "undefined") {
-      setInstance((window as any).__FHEVM_INSTANCE);
-    }
-
     // Load market data based on ID
     async function loadMarketData() {
       // Crypto markets
@@ -86,8 +98,6 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
     loadMarketData();
   }, [id]);
 
-  const { encryptBet } = useFheHelpers({ instance, signer: undefined, contractAddress });
-
   async function placeBet(e: React.FormEvent) {
     e.preventDefault();
 
@@ -111,16 +121,20 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
     setIsSubmitting(true);
 
     try {
-      console.log("Placing bet:", {
+      console.log("Debug info:", {
         marketId: id,
         amount: amount,
         side: side,
         address: address,
+        contractAddress,
+        hasEncryptBet: !!encryptBet,
+        hasPlaceBetContract: !!placeBetContract,
+        hasInstance: !!instance,
       });
 
       // Encrypt the bet data using Zama FHEVM
       if (!encryptBet || !placeBetContract) {
-        throw new Error("Encryption or contract not available");
+        throw new Error(`Missing dependencies: encryptBet=${!!encryptBet}, placeBetContract=${!!placeBetContract}`);
       }
 
       const enc = await encryptBet((builder: any) => {
@@ -152,7 +166,8 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       }, 3000);
     } catch (error) {
       console.error("Error placing bet:", error);
-      alert("Failed to place bet. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      alert(`Failed to place bet: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
