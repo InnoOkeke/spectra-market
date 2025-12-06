@@ -7,8 +7,26 @@ import { GenericContractsDeclaration } from "~~/utils/helper/contract";
 const deployedContracts = {
   11155111: {
     FHECounter: {
-      address: "0x036bEBfa3aAd2354Ee958B53eBAeC2F02E0A672D",
+      address: "0x0D0Efb5a1f7a02c8ecb61e8D523d499Aa5CAE703",
       abi: [
+        {
+          inputs: [],
+          name: "ZamaProtocolUnsupported",
+          type: "error",
+        },
+        {
+          inputs: [],
+          name: "confidentialProtocolId",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
         {
           inputs: [
             {
@@ -58,25 +76,12 @@ const deployedContracts = {
           stateMutability: "nonpayable",
           type: "function",
         },
-        {
-          inputs: [],
-          name: "protocolId",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "pure",
-          type: "function",
-        },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 9781034,
+      deployedOnBlock: 9782182,
     },
     PredictionMarket: {
-      address: "0x9d591865869491DfEA9528721d7e2Ee88676AADe",
+      address: "0xC644caC3579CE20f4f115FE177B4eB2f23e6712f",
       abi: [
         {
           inputs: [
@@ -380,13 +385,13 @@ const deployedContracts = {
             },
             {
               internalType: "bytes32",
-              name: "handles",
+              name: "encryptedAmount",
               type: "bytes32",
             },
             {
-              internalType: "bytes32",
+              internalType: "bytes",
               name: "inputProof",
-              type: "bytes32",
+              type: "bytes",
             },
           ],
           name: "placeEncryptedBet",
@@ -424,7 +429,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 9782012,
+      deployedOnBlock: 9782181,
     },
   },
 } as const;

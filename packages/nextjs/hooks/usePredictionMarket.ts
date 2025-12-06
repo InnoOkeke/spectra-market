@@ -2,7 +2,7 @@ import { useReadContract, useWriteContract } from "wagmi";
 import { useDeployedContractInfo } from "./helper";
 
 export const usePredictionMarket = () => {
-  const { data: contractInfo } = useDeployedContractInfo("PredictionMarket");
+  const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarket" });
   
   const { writeContractAsync } = useWriteContract();
 

@@ -177,6 +177,9 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       console.log("Encrypted payload:", enc);
 
       // Call the smart contract's placeEncryptedBet function
+      // handles[0] is the encrypted amount (as bytes32)
+      // inputProof is the proof (as bytes) 
+      // Convert Uint8Array to hex string using ethers
       const tx = await placeBetContract(
         BigInt(id),
         toHex(enc.handles[0]) as `0x${string}`,
