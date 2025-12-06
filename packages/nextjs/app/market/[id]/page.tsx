@@ -31,6 +31,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
   const [side, setSide] = useState("yes");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [betPlaced, setBetPlaced] = useState(false);
+  const [loadingStep, setLoadingStep] = useState("");
   
   const { placeBet: placeBetContract, getMarketInfo, claimWinnings } = usePredictionMarket();
   const { bets } = useMarketBets(parseInt(id));
@@ -116,12 +117,14 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
     }
 
     setIsSubmitting(true);
+    setLoadingStep("Initializing encryption...");
 
     try {
       // Wait for FHEVM instance and signer if not ready
       if (!instance || !ethersSigner) {
         alert("Encryption system is initializing. Please wait a moment and try again.");
         setIsSubmitting(false);
+        setLoadingStep("");
         return;
       }
 
@@ -130,6 +133,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       }
 
       // Only encrypt the amount, side is public
+      setLoadingStep("Encrypting bet amount...");
       const enc = await encryptBet((builder: any) => {
         builder.add64(BigInt(Math.floor(Number(amount) * 1e18)));
       });
@@ -150,6 +154,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       const betValue = BigInt(Math.floor(Number(amount) * 1e18));
       
       // Send the encrypted data as bytes (not bytes32)
+      setLoadingStep("Waiting for wallet confirmation...");
       await placeBetContract(
         marketId,
         toHex(enc.handles[0]) as `0x${string}`,
@@ -158,10 +163,12 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
         betValue
       );
 
+      setLoadingStep("Transaction confirmed!");
       setBetPlaced(true);
       setTimeout(() => {
         setBetPlaced(false);
         setAmount("0.001");
+        setLoadingStep("");
       }, 3000);
     } catch (error) {
       console.error("Bet placement error:", error);
@@ -169,6 +176,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       alert(`Failed to place bet: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
+      setLoadingStep("");
     }
   }
 
@@ -353,7 +361,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         />
                       </svg>
-                      Processing...
+                      {loadingStep || "Processing..."}
                     </span>
                   ) : !isConnected ? (
                     "Connect Wallet to Bet"
