@@ -181,8 +181,9 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       // handles[0] is the encrypted amount (as bytes32)
       // inputProof is the proof (as bytes) 
       // Convert Uint8Array to hex string using ethers
+      const marketId = BigInt(id); // Already validated as numeric earlier
       const tx = await placeBetContract(
-        BigInt(id),
+        marketId,
         toHex(enc.handles[0]) as `0x${string}`,
         toHex(enc.inputProof) as `0x${string}`
       );

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { type SportsMarket, fetchUpcomingSportsEvents, getSportIcon } from "~~/utils/sportsApi";
 import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
 import { MarketCard } from "~~/components/MarketCard";
+import { getOnChainMarketId, getSportsMarketMappings } from "~~/utils/sportsMarketMapping";
 
 export default function Home() {
   const [sportsMarkets, setSportsMarkets] = useState<SportsMarket[]>([]);
@@ -13,8 +14,14 @@ export default function Home() {
   const { marketCount } = usePredictionMarket();
 
   useEffect(() => {
-    // Fetch sports markets
-    fetchUpcomingSportsEvents().then(setSportsMarkets).finally(() => setIsLoading(false));
+    // Fetch sports markets and filter only those created on-chain
+    fetchUpcomingSportsEvents().then(events => {
+      const mappings = getSportsMarketMappings();
+      const onChainSportsMarkets = events.filter(event => 
+        mappings.some(m => m.sportsEventId === event.id)
+      );
+      setSportsMarkets(onChainSportsMarkets);
+    }).finally(() => setIsLoading(false));
   }, []);
 
   // Generate array of market IDs from marketCount
@@ -110,9 +117,10 @@ export default function Home() {
 
         <div className="grid gap-6">
           {activeTab === "crypto" ? (
-            marketIds.length === 0 ? (
+            !marketCount || marketIds.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-                <p className="text-gray-600">No crypto markets available yet.</p>
+                <p className="text-gray-600 mb-4">No crypto markets available yet.</p>
+                <p className="text-sm text-gray-500">Create the first market or check back soon!</p>
               </div>
             ) : (
               marketIds.map((id) => <MarketCard key={id} marketId={id} />)
@@ -127,18 +135,20 @@ export default function Home() {
               <p className="text-gray-600">No sports markets available yet.</p>
             </div>
           ) : (
-            sportsMarkets.map((m) => (
-              <Link
-                key={m.id}
-                href={`/market/${m.id}`}
-                className="group relative bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#0FA958]/50 rounded-2xl p-6 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl hover:shadow-[#0FA958]/20"
-              >
+            sportsMarkets.map((m) => {
+              const onChainId = getOnChainMarketId(m.id);
+              return (
+                <Link
+                  key={m.id}
+                  href={`/market/${onChainId}`}
+                  className="group relative bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#0FA958]/50 rounded-2xl p-6 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl hover:shadow-[#0FA958]/20"
+                >
                 <div className="absolute top-4 right-4 flex items-center gap-2">
                   <span className="px-3 py-1 bg-[#FFD534]/20 text-[#111111] rounded-full text-sm font-medium border border-[#FFD534]/30">
                     {getSportIcon(m.sport)} {m.sport}
                   </span>
                   <span className="px-3 py-1 bg-[#19C37D]/20 text-[#19C37D] rounded-full text-sm font-medium border border-[#19C37D]/30">
-                    Active
+                    Active #{onChainId}
                   </span>
                 </div>
 
@@ -195,7 +205,8 @@ export default function Home() {
                   <span className="text-[#0FA958] group-hover:translate-x-1 transition-transform">→</span>
                 </div>
               </Link>
-            ))
+              );
+            })
           )}
         </div>
 
