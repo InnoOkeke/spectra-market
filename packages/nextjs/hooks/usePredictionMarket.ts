@@ -14,6 +14,7 @@ export const usePredictionMarket = () => {
     chainId: selectedNetwork.id,
     query: {
       enabled: !!contractInfo?.address,
+      refetchInterval: 15000,
     },
   });
 

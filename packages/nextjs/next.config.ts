@@ -22,7 +22,8 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Cross-Origin-Opener-Policy",
-            value: "same-origin",
+            // Allow Coinbase Smart Wallet popups while keeping isolation for FHEVM
+            value: "same-origin-allow-popups",
           },
           {
             key: "Cross-Origin-Embedder-Policy",

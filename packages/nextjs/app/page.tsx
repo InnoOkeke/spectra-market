@@ -61,23 +61,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-            <div className="bg-white/10 backdrop-blur-sm border border-[#0FA958]/20 rounded-2xl p-6 text-center">
-              <div className="text-3xl font-bold text-[#0FA958] mb-2">$418K+</div>
-              <div className="text-gray-400">Total Volume</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm border border-[#19C37D]/20 rounded-2xl p-6 text-center">
-              <div className="text-3xl font-bold text-[#19C37D] mb-2">811</div>
-              <div className="text-gray-400">Active Traders</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm border border-[#FFD534]/20 rounded-2xl p-6 text-center">
-              <div className="text-3xl font-bold text-[#FFD534] mb-2">
-                {marketIds.length + sportsMarkets.length}
-              </div>
-              <div className="text-gray-400">Live Markets</div>
-            </div>
-          </div>
+          {/* Stats removed (demo data) */}
         </div>
       </div>
 

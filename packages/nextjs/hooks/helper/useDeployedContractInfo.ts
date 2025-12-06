@@ -52,32 +52,20 @@ export function useDeployedContractInfo<TContractName extends ContractName>(
 
   useEffect(() => {
     const checkContractDeployment = async () => {
-      try {
-        if (!isMounted() || !publicClient) return;
+      if (!isMounted()) return;
 
-        if (!deployedContract) {
-          setStatus(ContractCodeStatus.NOT_FOUND);
-          return;
-        }
-
-        const code = await publicClient.getBytecode({
-          address: deployedContract.address,
-        });
-
-        // If contract code is `0x` => no contract deployed on that address
-        if (code === "0x") {
-          setStatus(ContractCodeStatus.NOT_FOUND);
-          return;
-        }
+      // If we have a declared contract, return it without blocking on bytecode fetch
+      if (deployedContract) {
         setStatus(ContractCodeStatus.DEPLOYED);
-      } catch (e) {
-        console.error(e);
-        setStatus(ContractCodeStatus.NOT_FOUND);
+        return;
       }
+
+      // No declared contract for this network
+      setStatus(ContractCodeStatus.NOT_FOUND);
     };
 
     checkContractDeployment();
-  }, [isMounted, contractName, deployedContract, publicClient]);
+  }, [isMounted, contractName, deployedContract]);
 
   return {
     data: status === ContractCodeStatus.DEPLOYED ? deployedContract : undefined,
