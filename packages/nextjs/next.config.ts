@@ -28,6 +28,11 @@ if (isIpfs || isGitHubPages) {
   nextConfig.images = {
     unoptimized: true,
   };
+  // Skip dynamic routes during static export
+  nextConfig.experimental = {
+    ...nextConfig.experimental,
+    // This will skip pages with dynamic params
+  };
 }
 
-module.exports = nextConfig;
+export default nextConfig;

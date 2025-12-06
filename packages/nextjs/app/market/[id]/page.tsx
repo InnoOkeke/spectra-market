@@ -18,6 +18,25 @@ interface MarketData {
   awayTeam?: string;
 }
 
+// Generate static paths for all markets (for static export)
+export async function generateStaticParams() {
+  // Pre-generate paths for crypto markets (0, 1, 2)
+  const cryptoMarkets = ['0', '1', '2'];
+  
+  // Try to fetch sports markets, but don't fail if it doesn't work
+  let sportsMarkets: string[] = [];
+  try {
+    const sports = await fetchUpcomingSportsEvents();
+    sportsMarkets = sports.map(m => m.id.toString());
+  } catch (error) {
+    console.log('Could not fetch sports markets for static generation');
+  }
+  
+  return [...cryptoMarkets, ...sportsMarkets].map((id) => ({
+    id: id,
+  }));
+}
+
 export default function MarketDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { address, isConnected } = useAccount();
@@ -80,7 +99,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
     try {
       // For demo purposes, simulate bet placement
       // In production, this would:
-      // 1. Encrypt the bet data using FHEVM
+      // 1. Encrypt the bet data using Zama FHEVM
       // 2. Call the smart contract's placeEncryptedBet function
       // 3. Wait for transaction confirmation
       
@@ -313,7 +332,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
                 <div>
                   <h3 className="font-semibold text-[#111111] mb-1">Encrypted Submission</h3>
                   <p className="text-sm text-gray-600">
-                    Your bet is encrypted using FHEVM. Nobody can see your position.
+                    Your bet is encrypted using Zama FHEVM. Nobody can see your position.
                   </p>
                 </div>
               </div>

@@ -21,7 +21,7 @@ export const Footer = () => {
               </div>
             </div>
             <p className="text-sm text-gray-500 max-w-sm mb-4">
-              Professional encrypted prediction markets powered by FHEVM. Your positions remain confidential until market resolution.
+              Professional encrypted prediction markets powered by Zama FHEVM. Your positions remain confidential until market resolution.
             </p>
             <div className="flex gap-4">
               <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#0FA958] transition-colors">
@@ -90,7 +90,7 @@ export const Footer = () => {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-sm text-gray-500">
-            © 2025 Spectra. All rights reserved. Built with FHEVM.
+            © 2025 Spectra. All rights reserved. Built with Zama FHEVM.
           </div>
           <div className="flex gap-6 text-sm">
             <a href="#" className="hover:text-[#0FA958] transition-colors">Privacy Policy</a>
