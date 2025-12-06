@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build --webpack",
+    "build": "next build",
     "build:github": "GITHUB_PAGES=true NEXT_PUBLIC_IGNORE_BUILD_ERROR=true next build",
     "check-types": "tsc --noEmit --incremental",
     "dev": "next dev",
@@ -29,7 +29,7 @@
     "ethers": "^6.16.0",
     "idb": "^8.0.3",
     "kubo-rpc-client": "~5.0.2",
-    "next": "16.0.7",
+    "next": "15.2.6",
     "next-nprogress-bar": "~2.3.13",
     "next-themes": "~0.3.0",
     "qrcode.react": "~4.0.1",
