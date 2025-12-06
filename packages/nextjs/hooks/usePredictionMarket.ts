@@ -1,30 +1,69 @@
-import { useScaffoldContract, useScaffoldReadContract, useScaffoldWriteContract } from "./wagmi";
+import { useReadContract, useWriteContract } from "wagmi";
+import { useDeployedContractInfo } from "./helper";
 
 export const usePredictionMarket = () => {
-  const { data: contract } = useScaffoldContract({
-    contractName: "PredictionMarket",
-  });
-
-  const { writeContractAsync: createMarket } = useScaffoldWriteContract("PredictionMarket");
-  const { writeContractAsync: placeBet } = useScaffoldWriteContract("PredictionMarket");
-  const { writeContractAsync: resolveMarket } = useScaffoldWriteContract("PredictionMarket");
-  const { writeContractAsync: claimWinnings } = useScaffoldWriteContract("PredictionMarket");
+  const { data: contractInfo } = useDeployedContractInfo("PredictionMarket");
+  
+  const { writeContractAsync } = useWriteContract();
 
   // Read functions
-  const { data: marketCount } = useScaffoldReadContract({
-    contractName: "PredictionMarket",
+  const { data: marketCount } = useReadContract({
+    address: contractInfo?.address,
+    abi: contractInfo?.abi,
     functionName: "getMarketCount",
   });
 
-  const getMarket = (marketId: number) =>
-    useScaffoldReadContract({
-      contractName: "PredictionMarket",
+  const getMarket = (marketId: number) => {
+    return useReadContract({
+      address: contractInfo?.address,
+      abi: contractInfo?.abi,
       functionName: "getMarket",
       args: [BigInt(marketId)],
     });
+  };
+
+  const createMarket = async (args: any[]) => {
+    if (!contractInfo) throw new Error("Contract not loaded");
+    return writeContractAsync({
+      address: contractInfo.address,
+      abi: contractInfo.abi,
+      functionName: "createMarket",
+      args,
+    });
+  };
+
+  const placeBet = async (args: any[]) => {
+    if (!contractInfo) throw new Error("Contract not loaded");
+    return writeContractAsync({
+      address: contractInfo.address,
+      abi: contractInfo.abi,
+      functionName: "placeBet",
+      args,
+    });
+  };
+
+  const resolveMarket = async (args: any[]) => {
+    if (!contractInfo) throw new Error("Contract not loaded");
+    return writeContractAsync({
+      address: contractInfo.address,
+      abi: contractInfo.abi,
+      functionName: "resolveMarket",
+      args,
+    });
+  };
+
+  const claimWinnings = async (args: any[]) => {
+    if (!contractInfo) throw new Error("Contract not loaded");
+    return writeContractAsync({
+      address: contractInfo.address,
+      abi: contractInfo.abi,
+      functionName: "claimWinnings",
+      args,
+    });
+  };
 
   return {
-    contract,
+    contract: contractInfo,
     marketCount,
     getMarket,
     createMarket,
