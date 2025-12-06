@@ -76,7 +76,7 @@ const deployedContracts = {
       deployedOnBlock: 9781034,
     },
     PredictionMarket: {
-      address: "0x0DE7233d5f13370dB632ca194fC2b1cA82e3C9C5",
+      address: "0x9d591865869491DfEA9528721d7e2Ee88676AADe",
       abi: [
         {
           inputs: [
@@ -88,6 +88,11 @@ const deployedContracts = {
           ],
           stateMutability: "nonpayable",
           type: "constructor",
+        },
+        {
+          inputs: [],
+          name: "ZamaProtocolUnsupported",
+          type: "error",
         },
         {
           anonymous: false,
@@ -219,6 +224,19 @@ const deployedContracts = {
           name: "claimWinnings",
           outputs: [],
           stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "confidentialProtocolId",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
           type: "function",
         },
         {
@@ -377,19 +395,6 @@ const deployedContracts = {
           type: "function",
         },
         {
-          inputs: [],
-          name: "protocolId",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "pure",
-          type: "function",
-        },
-        {
           inputs: [
             {
               internalType: "uint256",
@@ -419,7 +424,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 9781033,
+      deployedOnBlock: 9782012,
     },
   },
 } as const;
