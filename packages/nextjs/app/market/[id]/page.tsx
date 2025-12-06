@@ -81,8 +81,8 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
 
         // Fetch from contract
         const { data: contractMarketData } = getMarket(marketId);
-        if (contractMarketData) {
-          const [question, deadline] = contractMarketData;
+        if (contractMarketData && Array.isArray(contractMarketData)) {
+          const [question, deadline] = contractMarketData as [string, bigint, ...any[]];
           setMarketData({
             id: marketId,
             question,
