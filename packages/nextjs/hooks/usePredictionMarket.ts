@@ -1,8 +1,9 @@
 import { useReadContract, useWriteContract } from "wagmi";
-import { useDeployedContractInfo } from "./helper";
+import { useDeployedContractInfo, useSelectedNetwork } from "./helper";
 
 export const usePredictionMarket = () => {
   const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarket" });
+  const selectedNetwork = useSelectedNetwork();
   
   const { writeContractAsync } = useWriteContract();
 
@@ -10,6 +11,7 @@ export const usePredictionMarket = () => {
     address: contractInfo?.address,
     abi: contractInfo?.abi,
     functionName: "getMarketCount",
+    chainId: selectedNetwork.id,
     query: {
       enabled: !!contractInfo?.address,
     },

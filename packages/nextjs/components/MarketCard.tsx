@@ -1,6 +1,6 @@
 import { useReadContract } from "wagmi";
 import Link from "next/link";
-import { useDeployedContractInfo } from "~~/hooks/helper";
+import { useDeployedContractInfo, useSelectedNetwork } from "~~/hooks/helper";
 
 interface MarketCardProps {
   marketId: number;
@@ -8,12 +8,14 @@ interface MarketCardProps {
 
 export function MarketCard({ marketId }: MarketCardProps) {
   const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarket" });
+  const selectedNetwork = useSelectedNetwork();
   
   const { data: marketData, isLoading } = useReadContract({
     address: contractInfo?.address,
     abi: contractInfo?.abi,
     functionName: "getMarket",
     args: [BigInt(marketId)],
+    chainId: selectedNetwork.id,
     query: {
       enabled: !!contractInfo?.address,
     },
