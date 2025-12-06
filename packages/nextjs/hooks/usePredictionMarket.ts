@@ -1,9 +1,12 @@
-import { useReadContract, useWriteContract } from "wagmi";
+import { useEffect, useState } from "react";
+import { usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { useDeployedContractInfo, useSelectedNetwork } from "./helper";
 
 export const usePredictionMarket = () => {
   const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarket" });
   const selectedNetwork = useSelectedNetwork();
+  const publicClient = usePublicClient({ chainId: selectedNetwork.id });
+  const [fallbackMarketCount, setFallbackMarketCount] = useState<bigint | undefined>(undefined);
   
   const { writeContractAsync } = useWriteContract();
 
@@ -17,6 +20,18 @@ export const usePredictionMarket = () => {
       refetchInterval: 15000,
     },
   });
+
+  useEffect(() => {
+    if (marketCount || !contractInfo?.address || !publicClient) return;
+    publicClient
+      .readContract({
+        address: contractInfo.address,
+        abi: contractInfo.abi,
+        functionName: "getMarketCount",
+      })
+      .then(value => setFallbackMarketCount(value as bigint))
+      .catch(() => undefined);
+  }, [marketCount, contractInfo, publicClient]);
 
   const getMarketInfo = () => ({
     address: contractInfo?.address,
@@ -67,7 +82,7 @@ export const usePredictionMarket = () => {
 
   return {
     contract: contractInfo,
-    marketCount,
+    marketCount: marketCount ?? fallbackMarketCount,
     getMarketInfo,
     createMarket,
     placeBet,

@@ -2,16 +2,22 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePublicClient } from "wagmi";
 import { type SportsMarket, fetchUpcomingSportsEvents, getSportIcon } from "~~/utils/sportsApi";
 import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
+import { useDeployedContractInfo, useSelectedNetwork } from "~~/hooks/helper";
 import { MarketCard } from "~~/components/MarketCard";
 import { getOnChainMarketId, getSportsMarketMappings } from "~~/utils/sportsMarketMapping";
 
 export default function Home() {
   const [sportsMarkets, setSportsMarkets] = useState<SportsMarket[]>([]);
+  const [marketIds, setMarketIds] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<"crypto" | "sports">("crypto");
   const [isLoading, setIsLoading] = useState(true);
   const { marketCount } = usePredictionMarket();
+  const selectedNetwork = useSelectedNetwork();
+  const publicClient = usePublicClient({ chainId: selectedNetwork.id });
+  const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarket" });
 
   useEffect(() => {
     fetchUpcomingSportsEvents().then(events => {
@@ -23,8 +29,22 @@ export default function Home() {
     }).finally(() => setIsLoading(false));
   }, []);
 
-  const totalMarketCount = marketCount ? Number(marketCount) : 0;
-  const marketIds = totalMarketCount > 0 ? Array.from({ length: totalMarketCount }, (_, i) => i) : [];
+  useEffect(() => {
+    if (!contractInfo?.address || !publicClient) return;
+    (async () => {
+      try {
+        const count = await publicClient.readContract({
+          address: contractInfo.address,
+          abi: contractInfo.abi,
+          functionName: "getMarketCount",
+        });
+        const n = Number(count || 0);
+        setMarketIds(n > 0 ? Array.from({ length: n }, (_, i) => i) : []);
+      } catch {
+        setMarketIds([]);
+      }
+    })();
+  }, [contractInfo, publicClient]);
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
