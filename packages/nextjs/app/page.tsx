@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { type SportsMarket, fetchUpcomingSportsEvents, getSportIcon } from "~~/utils/sportsApi";
 import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
@@ -8,13 +8,28 @@ import { useMarkets } from "~~/hooks/useMarkets";
 import { MarketCard } from "~~/components/MarketCard";
 import { getOnChainMarketId, getSportsMarketMappings } from "~~/utils/sportsMarketMapping";
 
+const CATEGORIES = [
+  { id: 0, name: "Crypto", icon: "💰", color: "from-[#0FA958] to-[#19C37D]" },
+  { id: 1, name: "Politics", icon: "🏛️", color: "from-[#6366F1] to-[#8B5CF6]" },
+  { id: 2, name: "Sports", icon: "⚽", color: "from-[#F59E0B] to-[#EF4444]" },
+  { id: 3, name: "Environmental", icon: "🌍", color: "from-[#10B981] to-[#059669]" },
+  { id: 4, name: "Technology", icon: "💻", color: "from-[#3B82F6] to-[#2563EB]" },
+  { id: 5, name: "Finance", icon: "📈", color: "from-[#EC4899] to-[#DB2777]" },
+];
+
 export default function Home() {
   const [sportsMarkets, setSportsMarkets] = useState<SportsMarket[]>([]);
-  const [activeTab, setActiveTab] = useState<"crypto" | "sports">("crypto");
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [isSportsLoading, setIsSportsLoading] = useState(true);
   const { marketCount } = usePredictionMarket();
   
   const { markets, isLoading: isMarketsLoading } = useMarkets(marketCount);
+
+  // Filter markets by category
+  const filteredMarkets = useMemo(() => {
+    if (selectedCategory === null) return markets;
+    return markets.filter(market => Number(market.categoryId) === selectedCategory);
+  }, [markets, selectedCategory]);
 
   useEffect(() => {
     console.log('DEBUG: marketCount =', marketCount?.toString());
@@ -73,134 +88,58 @@ export default function Home() {
 
       {/* Markets Section */}
       <div id="markets" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h2 className="text-3xl font-bold mb-2 text-[#111111]">Active Markets</h2>
-            <p className="text-gray-600">Place your encrypted bets and earn rewards</p>
-          </div>
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold mb-2 text-[#111111]">Active Markets</h2>
+          <p className="text-gray-600">Place your encrypted bets and earn rewards</p>
+        </div>
 
-          {/* Category Tabs */}
-          <div className="flex gap-2 bg-white rounded-xl p-1 border border-gray-200">
+        {/* Category Filter */}
+        <div className="mb-8 overflow-x-auto">
+          <div className="flex gap-3 pb-2">
             <button
-              onClick={() => setActiveTab("crypto")}
-              className={`px-6 py-2 rounded-lg font-semibold transition-all ${
-                activeTab === "crypto"
+              onClick={() => setSelectedCategory(null)}
+              className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap ${
+                selectedCategory === null
                   ? "bg-gradient-to-r from-[#0FA958] to-[#19C37D] text-white shadow-lg"
-                  : "text-gray-600 hover:text-[#0FA958]"
+                  : "bg-white text-gray-600 hover:text-[#0FA958] border border-gray-200"
               }`}
             >
-              💰 Crypto
+              🌐 All Markets
             </button>
-            <button
-              onClick={() => setActiveTab("sports")}
-              className={`px-6 py-2 rounded-lg font-semibold transition-all ${
-                activeTab === "sports"
-                  ? "bg-gradient-to-r from-[#0FA958] to-[#19C37D] text-white shadow-lg"
-                  : "text-gray-600 hover:text-[#0FA958]"
-              }`}
-            >
-              ⚽ Sports
-            </button>
+            {CATEGORIES.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap ${
+                  selectedCategory === category.id
+                    ? `bg-gradient-to-r ${category.color} text-white shadow-lg`
+                    : "bg-white text-gray-600 hover:text-[#0FA958] border border-gray-200"
+                }`}
+              >
+                {category.icon} {category.name}
+              </button>
+            ))}
           </div>
         </div>
 
+        {/* Markets Grid */}
         <div className="grid gap-6">
-          {activeTab === "crypto" ? (
-            isMarketsLoading ? (
-              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-                <div className="animate-spin w-8 h-8 border-4 border-[#0FA958] border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading markets...</p>
-              </div>
-            ) : markets.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-                <p className="text-gray-600 mb-4">No crypto markets available yet.</p>
-                <p className="text-sm text-gray-500">Create the first market or check back soon!</p>
-              </div>
-            ) : (
-              markets.map((market) => <MarketCard key={market.id} market={market} />)
-            )
-          ) : isSportsLoading ? (
+          {isMarketsLoading ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
               <div className="animate-spin w-8 h-8 border-4 border-[#0FA958] border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading sports markets...</p>
+              <p className="text-gray-600">Loading markets...</p>
             </div>
-          ) : sportsMarkets.length === 0 ? (
+          ) : filteredMarkets.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-              <p className="text-gray-600">No sports markets available yet.</p>
+              <p className="text-gray-600 mb-4">
+                {selectedCategory !== null
+                  ? `No ${CATEGORIES.find(c => c.id === selectedCategory)?.name} markets available yet.`
+                  : "No markets available yet."}
+              </p>
+              <p className="text-sm text-gray-500">Create the first market or check back soon!</p>
             </div>
           ) : (
-            sportsMarkets.map((m) => {
-              const onChainId = getOnChainMarketId(m.id);
-              return (
-                <Link
-                  key={m.id}
-                  href={`/market/${onChainId}`}
-                  className="group relative bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#0FA958]/50 rounded-2xl p-6 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl hover:shadow-[#0FA958]/20"
-                >
-                <div className="absolute top-4 right-4 flex items-center gap-2">
-                  <span className="px-3 py-1 bg-[#FFD534]/20 text-[#111111] rounded-full text-sm font-medium border border-[#FFD534]/30">
-                    {getSportIcon(m.sport)} {m.sport}
-                  </span>
-                  <span className="px-3 py-1 bg-[#19C37D]/20 text-[#19C37D] rounded-full text-sm font-medium border border-[#19C37D]/30">
-                    Active #{onChainId}
-                  </span>
-                </div>
-
-                <div className="mb-4">
-                  <h3 className="text-xl font-semibold mb-2 text-[#111111] group-hover:text-[#0FA958] transition-colors">
-                    {m.question}
-                  </h3>
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span>Ends: {m.deadline}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                        />
-                      </svg>
-                      <span>Volume: {m.volume}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                        />
-                      </svg>
-                      <span>{m.participants} participants</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                  <div className="flex gap-2">
-                    <div className="px-3 py-1 bg-[#0FA958]/10 text-[#0FA958] rounded-lg text-xs font-medium border border-[#0FA958]/20">
-                      🔐 Encrypted
-                    </div>
-                    <div className="px-3 py-1 bg-[#FFD534]/10 text-[#111111] rounded-lg text-xs font-medium border border-[#FFD534]/20">
-                      ⚡ Instant Settlement
-                    </div>
-                  </div>
-                  <span className="text-[#0FA958] group-hover:translate-x-1 transition-transform">→</span>
-                </div>
-              </Link>
-              );
-            })
+            filteredMarkets.map((market) => <MarketCard key={market.id} market={market} />)
           )}
         </div>
 

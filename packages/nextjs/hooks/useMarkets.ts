@@ -5,10 +5,12 @@ import { useDeployedContractInfo, useSelectedNetwork } from "./helper";
 export interface Market {
   id: number;
   question: string;
+  categoryId: bigint;
   deadline: bigint;
   creator: `0x${string}`;
   resolved: boolean;
   winningSide: boolean;
+  targetPrice: bigint;
   aggregatedHandles: `0x${string}`;
   inputProof: `0x${string}`;
 }
@@ -25,7 +27,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 export const useMarkets = (marketCount?: bigint) => {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarket" });
+  const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarketV2" });
   const selectedNetwork = useSelectedNetwork();
   const publicClient = usePublicClient({ chainId: selectedNetwork.id });
   const isFetchingRef = useRef(false);
@@ -85,17 +87,19 @@ export const useMarkets = (marketCount?: bigint) => {
           .map((result: any, index: number) => {
             if (result.status === 'failure' || !result.result) return null;
             
-            const [question, deadline, creator, resolved, winningSide, aggregatedHandles, inputProof] = result.result;
+            const [question, categoryId, deadline, creator, resolved, winningSide, targetPrice] = result.result;
             
             return {
               id: index,
               question: question as string,
+              categoryId: categoryId as bigint,
               deadline: deadline as bigint,
               creator: creator as `0x${string}`,
               resolved: resolved as boolean,
               winningSide: winningSide as boolean,
-              aggregatedHandles: aggregatedHandles as `0x${string}`,
-              inputProof: inputProof as `0x${string}`,
+              targetPrice: targetPrice as bigint,
+              aggregatedHandles: "0x" as `0x${string}`,
+              inputProof: "0x" as `0x${string}`,
             };
           })
           .filter((m): m is Market => m !== null);

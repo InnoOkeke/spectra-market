@@ -1,14 +1,16 @@
 "use client";
 
-import { use, useEffect, useState, useMemo } from "react";
+import { use, useMemo } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { useFhevm } from "@fhevm-sdk";
 import { useFheHelpers } from "~~/utils/fhe";
-import { fetchUpcomingSportsEvents, getSportIcon } from "~~/utils/sportsApi";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
-import { toHex } from "viem";
+import { useMarketBets, useUserBet } from "~~/hooks/useMarketBets";
+import { useMarketPoolInfo } from "~~/hooks/useMarketPoolInfo";
+import { toHex, formatEther } from "viem";
 import { useWagmiEthers } from "~~/hooks/wagmi/useWagmiEthers";
+import { useState } from "react";
 
 interface MarketData {
   id: string | number;
@@ -16,7 +18,7 @@ interface MarketData {
   deadline: string;
   volume: string;
   participants: number;
-  category?: string;
+  category: string;
   sport?: string;
   homeTeam?: string;
   awayTeam?: string;
@@ -27,24 +29,27 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
   const { address, isConnected, chain } = useAccount();
   const [amount, setAmount] = useState("0.001");
   const [side, setSide] = useState("yes");
-  const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [betPlaced, setBetPlaced] = useState(false);
   
-  const { placeBet: placeBetContract, getMarketInfo } = usePredictionMarket();
+  const { placeBet: placeBetContract, getMarketInfo, claimWinnings } = usePredictionMarket();
+  const { bets } = useMarketBets(parseInt(id));
+  const { userBet } = useUserBet(parseInt(id), address);
+  const { poolInfo } = useMarketPoolInfo(parseInt(id));
   
-  // Get PredictionMarket contract address from deployed contracts
-  const contractAddress = deployedContracts[11155111]?.PredictionMarket?.address as `0x${string}` | undefined;
+  // Get PredictionMarketV2 contract address from deployed contracts
+  const contractAddress = deployedContracts[11155111]?.PredictionMarketV2?.address as `0x${string}` | undefined;
   
   // Use the wagmi hook properly at the top level
   const marketInfo = getMarketInfo();
-  const { data: contractMarketData } = useReadContract({
+  const { data: contractMarketData, isLoading: isMarketLoading } = useReadContract({
     address: marketInfo.address,
     abi: marketInfo.abi,
     functionName: "getMarket",
     args: id && !isNaN(parseInt(id)) ? [BigInt(parseInt(id))] : undefined,
     query: {
       enabled: !!id && !isNaN(parseInt(id)) && !!marketInfo.address && !!marketInfo.abi,
+      staleTime: 60000, // Cache for 1 minute
     },
   });
   
@@ -62,82 +67,35 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
   const { ethersSigner } = useWagmiEthers();
   const { encryptBet } = useFheHelpers({ instance, signer: ethersSigner, contractAddress });
 
-  useEffect(() => {
-    async function loadMarketData() {
-      try {
-        const marketId = parseInt(id);
-        if (isNaN(marketId)) {
-          if (id.startsWith("sport-")) {
-            const sportsMarkets = await fetchUpcomingSportsEvents();
-            const market = sportsMarkets.find(m => m.id === id);
-            if (market) setMarketData(market);
-          }
-          return;
-        }
+  // Compute market data directly from hooks instead of separate useEffect
+  const marketData = useMemo(() => {
+    const marketId = parseInt(id);
+    if (isNaN(marketId)) return null;
 
-        if (contractMarketData && Array.isArray(contractMarketData)) {
-          const [question, deadline, creator, resolved, winningSide] = contractMarketData as [
-            string,
-            bigint,
-            string,
-            boolean,
-            boolean,
-            ...any[]
-          ];
+    if (!contractMarketData || !Array.isArray(contractMarketData)) return null;
 
-          // Fetch bet events to count participants
-          let participantCount = 0;
-          if (marketInfo.address) {
-            try {
-              const { createPublicClient, http } = await import('viem');
-              const { sepolia } = await import('viem/chains');
-              
-              const publicClient = createPublicClient({
-                chain: sepolia,
-                transport: http('https://rpc.sepolia.org'),
-              });
+    const [question, categoryId, deadline, creator, resolved, winningSide, targetPrice] = contractMarketData as [
+      string,
+      bigint,
+      bigint,
+      string,
+      boolean,
+      boolean,
+      bigint,
+    ];
 
-              console.log('Fetching BetPlaced events for market', marketId);
-              
-              const logs = await publicClient.getContractEvents({
-                address: marketInfo.address!,
-                abi: marketInfo.abi!,
-                eventName: 'BetPlaced',
-                args: {
-                  marketId: BigInt(marketId),
-                },
-                fromBlock: BigInt(7250000), // Start from a recent block to speed up query
-                toBlock: 'latest',
-              });
+    const participantCount = poolInfo ? Number(poolInfo.participantCount) : 0;
+    const totalBets = poolInfo ? Number(poolInfo.totalYesBets + poolInfo.totalNoBets) : 0;
 
-              console.log('BetPlaced events found:', logs.length);
-
-              // Count unique participants
-              const uniqueUsers = new Set(logs.map((log: any) => log.args.user?.toLowerCase()));
-              participantCount = uniqueUsers.size;
-              
-              console.log('Unique participants:', participantCount);
-            } catch (e) {
-              console.error('Failed to fetch bet events:', e);
-            }
-          }
-
-          setMarketData({
-            id: marketId,
-            question,
-            deadline: new Date(Number(deadline) * 1000).toLocaleDateString(),
-            volume: participantCount > 0 ? `${participantCount} bet${participantCount !== 1 ? 's' : ''}` : "No bets yet",
-            participants: participantCount,
-            category: question.includes("BTC") || question.includes("ETH") ? "Crypto" : "Finance",
-          });
-        }
-      } catch (error) {
-        console.error('Error loading market data:', error);
-      }
-    }
-
-    loadMarketData();
-  }, [id, contractMarketData, marketInfo.address, marketInfo.abi]);
+    return {
+      id: marketId,
+      question,
+      deadline: new Date(Number(deadline) * 1000).toLocaleDateString(),
+      volume: totalBets > 0 ? `${totalBets} bet${totalBets !== 1 ? 's' : ''}` : "No bets yet",
+      participants: participantCount,
+      category: question.includes("BTC") || question.includes("ETH") ? "Crypto" : "Finance",
+    };
+  }, [id, contractMarketData, poolInfo]);
 
   async function placeBet(e: React.FormEvent) {
     e.preventDefault();
@@ -156,38 +114,46 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
       alert("Contract address not found. Please check network.");
       return;
     }
-    
-    if (!instance) {
-      alert("FHEVM instance not initialized. Please wait and try again.");
-      return;
-    }
-    
-    if (!ethersSigner) {
-      alert("Wallet signer not available. Please ensure wallet is connected.");
-      return;
-    }
 
     setIsSubmitting(true);
 
     try {
+      // Wait for FHEVM instance and signer if not ready
+      if (!instance || !ethersSigner) {
+        alert("Encryption system is initializing. Please wait a moment and try again.");
+        setIsSubmitting(false);
+        return;
+      }
+
       if (!encryptBet || !placeBetContract) {
         throw new Error("Missing encryption or contract dependencies");
       }
 
+      // Only encrypt the amount, side is public
       const enc = await encryptBet((builder: any) => {
         builder.add64(BigInt(Math.floor(Number(amount) * 1e18)));
-        builder.addBool(side === "yes");
       });
       
       if (!enc || !enc.handles || !enc.inputProof) {
         throw new Error("Encryption failed");
       }
 
+      console.log("Encrypted data:", {
+        handleLength: enc.handles[0].length,
+        inputProofLength: enc.inputProof.length,
+        handleHex: toHex(enc.handles[0]),
+        inputProofHex: toHex(enc.inputProof),
+      });
+
       const marketId = BigInt(id);
+      const betSide = side === "yes";
+      
+      // Send the encrypted data as bytes (not bytes32)
       await placeBetContract(
         marketId,
         toHex(enc.handles[0]) as `0x${string}`,
-        toHex(enc.inputProof) as `0x${string}`
+        toHex(enc.inputProof) as `0x${string}`,
+        betSide
       );
 
       setBetPlaced(true);
@@ -196,8 +162,25 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
         setAmount("0.001");
       }, 3000);
     } catch (error) {
+      console.error("Bet placement error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       alert(`Failed to place bet: ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleClaimWinnings() {
+    if (!marketData || !userBet?.exists) return;
+    
+    setIsSubmitting(true);
+    try {
+      const marketId = BigInt(id);
+      await claimWinnings(marketId);
+      alert("Winnings claimed successfully!");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      alert(`Failed to claim winnings: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -219,33 +202,15 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                {marketData.sport && (
-                  <span className="px-3 py-1 bg-[#FFD534]/20 text-[#111111] rounded-full text-sm font-medium border border-[#FFD534]/30">
-                    {getSportIcon(marketData.sport)} {marketData.sport}
-                  </span>
-                )}
-                {marketData.category && (
-                  <span className="px-3 py-1 bg-[#0FA958]/20 text-[#0FA958] rounded-full text-sm font-medium border border-[#0FA958]/30">
-                    {marketData.category}
-                  </span>
-                )}
+                <span className="px-3 py-1 bg-[#0FA958]/20 text-[#0FA958] rounded-full text-sm font-medium border border-[#0FA958]/30">
+                  {marketData.category}
+                </span>
                 <span className="px-3 py-1 bg-[#19C37D]/20 text-[#19C37D] rounded-full text-sm font-medium border border-[#19C37D]/30">
                   Active
                 </span>
                 <span className="text-sm text-gray-500">Market #{id}</span>
               </div>
               <h1 className="text-3xl font-bold text-[#111111] mb-2">{marketData.question}</h1>
-              {marketData.homeTeam && marketData.awayTeam && (
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="px-3 py-1 bg-gray-100 rounded-lg font-semibold text-[#111111]">
-                    {marketData.homeTeam}
-                  </span>
-                  <span className="text-gray-400">vs</span>
-                  <span className="px-3 py-1 bg-gray-100 rounded-lg font-semibold text-[#111111]">
-                    {marketData.awayTeam}
-                  </span>
-                </div>
-              )}
               <p className="text-gray-600">
                 Market closes on <span className="font-semibold">{marketData.deadline}</span>
               </p>
@@ -373,8 +338,8 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
               <div className="pt-4">
                 <button
                   type="submit"
-                  disabled={isSubmitting || !isConnected || !instance || !ethersSigner}
-                  className="w-full bg-gradient-to-r from-[#0FA958] to-[#19C37D] hover:from-[#0FA958]/90 hover:to-[#19C37D]/90 text-white font-semibold py-4 rounded-xl transition-all transform hover:scale-[1.02] shadow-lg shadow-[#0FA958]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  disabled={isSubmitting || !isConnected}
+                  className="w-full bg-gradient-to-r from-[#0FA958] to-[#19C37D] hover:from-[#0FA958]/90 hover:to-[#19C37D]/90 text-white font-semibold py-4 rounded-xl transition-all transform hover:scale-[1.02] shadow-lg shadow-[#0FA958]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
                 >
                   {isSubmitting ? (
                     <span className="flex items-center justify-center gap-2">
@@ -388,8 +353,8 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
                       </svg>
                       Processing...
                     </span>
-                  ) : !instance || !ethersSigner ? (
-                    "Initializing..."
+                  ) : !isConnected ? (
+                    "Connect Wallet to Bet"
                   ) : (
                     "🔐 Place Encrypted Bet"
                   )}
@@ -397,6 +362,101 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
               </div>
             </form>
           </div>
+
+          {/* User Bet Status & Claim */}
+          {userBet?.exists && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <h2 className="text-xl font-bold text-[#111111] mb-4">Your Bet</h2>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Amount:</span>
+                  <span className="font-bold">{formatEther(userBet.amount)} ETH</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Side:</span>
+                  <span className={`font-bold ${userBet.side ? 'text-green-600' : 'text-red-600'}`}>
+                    {userBet.side ? 'YES' : 'NO'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Status:</span>
+                  <span className="font-bold">
+                    {userBet.claimed ? '✓ Claimed' : 'Pending'}
+                  </span>
+                </div>
+                
+                {marketData && contractMarketData && Array.isArray(contractMarketData) && contractMarketData[3] && !userBet.claimed && userBet.side === contractMarketData[4] && (
+                  <button
+                    onClick={handleClaimWinnings}
+                    disabled={isSubmitting}
+                    className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold py-3 rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'Claiming...' : '🎉 Claim Winnings'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Pool Statistics */}
+          {poolInfo && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <h2 className="text-xl font-bold text-[#111111] mb-4">Pool Statistics</h2>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Pool:</span>
+                  <span className="font-bold">
+                    {formatEther(poolInfo.totalYesAmount + poolInfo.totalNoAmount)} ETH
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">YES Pool:</span>
+                  <span className="font-bold text-green-600">
+                    {formatEther(poolInfo.totalYesAmount)} ETH ({poolInfo.totalYesBets.toString()} bets)
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">NO Pool:</span>
+                  <span className="font-bold text-red-600">
+                    {formatEther(poolInfo.totalNoAmount)} ETH ({poolInfo.totalNoBets.toString()} bets)
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Participants:</span>
+                  <span className="font-bold">{poolInfo.participantCount.toString()}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Bet List */}
+          {bets && bets.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:col-span-2">
+              <h2 className="text-xl font-bold text-[#111111] mb-4">Recent Bets ({bets.length})</h2>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {bets.slice(0, 10).map((bet, index) => (
+                  <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-600">
+                        {bet.bettor.slice(0, 6)}...{bet.bettor.slice(-4)}
+                      </span>
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${
+                        bet.side ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {bet.side ? 'YES' : 'NO'}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold">{formatEther(bet.amount)} ETH</div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(Number(bet.timestamp) * 1000).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Market Info Card */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">

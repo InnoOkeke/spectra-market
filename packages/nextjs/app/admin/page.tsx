@@ -2,21 +2,59 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { isAdmin } from "~~/utils/adminConfig";
 import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
+import deployedContracts from "~~/contracts/deployedContracts";
 
 export default function AdminPage() {
   const { address, isConnected } = useAccount();
   const userIsAdmin = isAdmin(address);
-  const { createMarket: createMarketContract } = usePredictionMarket();
+  const { 
+    createMarket: createMarketContract,
+    addCategory,
+    setPlatformFee,
+    withdrawFees,
+  } = usePredictionMarket();
 
+  const contractAddress = deployedContracts[11155111].PredictionMarketV2.address;
+  const contractAbi = deployedContracts[11155111].PredictionMarketV2.abi;
+
+  // Read contract data
+  const { data: categoryCount } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: "getCategoryCount",
+  });
+
+  const { data: collectedFees } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: "getCollectedFees",
+  });
+
+  const { data: platformFeePercent } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: "platformFeePercent",
+  });
+
+  // State
+  const [activeTab, setActiveTab] = useState<"markets" | "categories" | "fees">("markets");
   const [marketId, setMarketId] = useState("0");
   const [question, setQuestion] = useState("");
+  const [categoryId, setCategoryId] = useState("0");
   const [deadline, setDeadline] = useState("");
   const [targetPrice, setTargetPrice] = useState("40000");
   const [isCreating, setIsCreating] = useState(false);
   const [createSuccess, setCreateSuccess] = useState(false);
+
+  // Category form
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryDescription, setCategoryDescription] = useState("");
+
+  // Fee form
+  const [newFeePercent, setNewFeePercent] = useState("");
 
   async function createMarket(e: React.FormEvent) {
     e.preventDefault();
@@ -26,12 +64,12 @@ export default function AdminPage() {
     try {
       const deadlineTimestamp = BigInt(Math.floor(new Date(deadline).getTime() / 1000));
       const targetPriceBigInt = BigInt(targetPrice);
+      const categoryIdBigInt = BigInt(categoryId);
       
-      const tx = await createMarketContract(question, deadlineTimestamp, targetPriceBigInt);
+      const tx = await createMarketContract(question, categoryIdBigInt, deadlineTimestamp, targetPriceBigInt);
       console.log("Market creation tx:", tx);
       
       setCreateSuccess(true);
-      // Reset form
       setQuestion("");
       setDeadline("");
       setTargetPrice("40000");
@@ -45,9 +83,54 @@ export default function AdminPage() {
     }
   }
 
+  async function handleAddCategory(e: React.FormEvent) {
+    e.preventDefault();
+    if (!categoryName || !categoryDescription) return;
+    setIsCreating(true);
+    try {
+      await addCategory(categoryName, categoryDescription);
+      setCategoryName("");
+      setCategoryDescription("");
+      alert("Category added successfully!");
+    } catch (error) {
+      console.error("Error adding category:", error);
+      alert("Failed to add category");
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  async function handleSetPlatformFee(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newFeePercent) return;
+    setIsCreating(true);
+    try {
+      await setPlatformFee(BigInt(newFeePercent));
+      setNewFeePercent("");
+      alert("Platform fee updated successfully!");
+    } catch (error) {
+      console.error("Error setting platform fee:", error);
+      alert("Failed to update platform fee");
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  async function handleWithdrawFees() {
+    setIsCreating(true);
+    try {
+      await withdrawFees();
+      alert("Fees withdrawn successfully!");
+    } catch (error) {
+      console.error("Error withdrawing fees:", error);
+      alert("Failed to withdraw fees");
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
   async function resolveMarket(e: React.FormEvent) {
     e.preventDefault();
-    // In production, call relayer script (server) to compute aggregation and call resolveMarket on-chain.
     alert(
       `Resolving Market #${marketId}\nTarget Price: $${targetPrice}\nSee scripts/fhe-resolver.js for implementation`,
     );
@@ -183,11 +266,39 @@ export default function AdminPage() {
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-[#111111] mb-2">Category</label>
+                <select
+                  value={categoryId}
+                  onChange={e => setCategoryId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#0FA958] focus:ring-2 focus:ring-[#0FA958]/20 outline-none transition bg-white text-[#111111]"
+                  required
+                >
+                  {Array.from({ length: Number(categoryCount || 0) }, (_, i) => (
+                    <option key={i} value={i}>
+                      Category {i}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-[#111111] mb-2">Deadline</label>
                 <input
                   type="date"
                   value={deadline}
                   onChange={e => setDeadline(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#0FA958] focus:ring-2 focus:ring-[#0FA958]/20 outline-none transition bg-white text-[#111111]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#111111] mb-2">Target Price (USD)</label>
+                <input
+                  type="number"
+                  value={targetPrice}
+                  onChange={e => setTargetPrice(e.target.value)}
+                  placeholder="40000"
                   className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#0FA958] focus:ring-2 focus:ring-[#0FA958]/20 outline-none transition bg-white text-[#111111]"
                   required
                 />

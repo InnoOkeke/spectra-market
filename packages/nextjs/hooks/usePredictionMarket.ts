@@ -3,7 +3,7 @@ import { usePublicClient, useReadContract, useWriteContract, useAccount, useChai
 import { useDeployedContractInfo, useSelectedNetwork } from "./helper";
 
 export const usePredictionMarket = () => {
-  const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarket" });
+  const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarketV2" });
   const selectedNetwork = useSelectedNetwork();
   const publicClient = usePublicClient({ chainId: selectedNetwork.id });
   const [fallbackMarketCount, setFallbackMarketCount] = useState<bigint | undefined>(undefined);
@@ -68,24 +68,24 @@ export const usePredictionMarket = () => {
     abi: contractInfo?.abi,
   });
 
-  const createMarket = async (question: string, deadline: bigint, targetPrice: bigint) => {
+  const createMarket = async (question: string, categoryId: bigint, deadline: bigint, targetPrice: bigint) => {
     if (!contractInfo) throw new Error("Contract not loaded");
     return writeContractAsync({
       address: contractInfo.address,
       abi: contractInfo.abi,
       functionName: "createMarket",
       gas: 300000n,
-      args: [question, deadline, targetPrice] as const,
+      args: [question, categoryId, deadline, targetPrice] as const,
     });
   };
 
-  const placeBet = async (marketId: bigint, handles: `0x${string}`, inputProof: `0x${string}`) => {
+  const placeBet = async (marketId: bigint, encryptedData: `0x${string}`, inputProof: `0x${string}`, side: boolean) => {
     if (!contractInfo) throw new Error("Contract not loaded");
     return writeContractAsync({
       address: contractInfo.address,
       abi: contractInfo.abi,
       functionName: "placeEncryptedBet",
-      args: [marketId, handles, inputProof] as const,
+      args: [marketId, encryptedData, inputProof, side] as const,
       gas: 500000n, // Set reasonable gas limit for encrypted operations
     });
   };
@@ -110,6 +110,46 @@ export const usePredictionMarket = () => {
     });
   };
 
+  const addCategory = async (name: string, description: string) => {
+    if (!contractInfo) throw new Error("Contract not loaded");
+    return writeContractAsync({
+      address: contractInfo.address,
+      abi: contractInfo.abi,
+      functionName: "addCategory",
+      args: [name, description] as const,
+    });
+  };
+
+  const updateCategory = async (categoryId: bigint, name: string, description: string, active: boolean) => {
+    if (!contractInfo) throw new Error("Contract not loaded");
+    return writeContractAsync({
+      address: contractInfo.address,
+      abi: contractInfo.abi,
+      functionName: "updateCategory",
+      args: [categoryId, name, description, active] as const,
+    });
+  };
+
+  const setPlatformFee = async (newFeePercent: bigint) => {
+    if (!contractInfo) throw new Error("Contract not loaded");
+    return writeContractAsync({
+      address: contractInfo.address,
+      abi: contractInfo.abi,
+      functionName: "setPlatformFee",
+      args: [newFeePercent] as const,
+    });
+  };
+
+  const withdrawFees = async () => {
+    if (!contractInfo) throw new Error("Contract not loaded");
+    return writeContractAsync({
+      address: contractInfo.address,
+      abi: contractInfo.abi,
+      functionName: "withdrawFees",
+      args: [] as const,
+    });
+  };
+
   return {
     contract: contractInfo,
     marketCount: marketCount ?? fallbackMarketCount,
@@ -118,5 +158,9 @@ export const usePredictionMarket = () => {
     placeBet,
     resolveMarket,
     claimWinnings,
+    addCategory,
+    updateCategory,
+    setPlatformFee,
+    withdrawFees,
   };
 };
