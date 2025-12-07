@@ -61,16 +61,23 @@ export const useUserBet = (marketId: number, userAddress: string | undefined) =>
   let userBet:
     | {
         exists: boolean;
+        encryptedAmount: string;  // Encrypted handle for decryption
+        encryptedSide: string;    // Encrypted handle for decryption
         timestamp: bigint;
         claimed: boolean;
-        // V3: amount and side are encrypted, not readable
       }
     | undefined;
 
   if (data) {
-    // V3: only returns exists, timestamp, claimed
-    const [exists, timestamp, claimed] = data as [boolean, bigint, boolean];
-    userBet = { exists, timestamp, claimed };
+    // V3: returns exists, encryptedAmount, encryptedSide, timestamp, claimed
+    const [exists, encryptedAmount, encryptedSide, timestamp, claimed] = data as [
+      boolean,
+      string,
+      string,
+      bigint,
+      boolean,
+    ];
+    userBet = { exists, encryptedAmount, encryptedSide, timestamp, claimed };
   }
 
   return {

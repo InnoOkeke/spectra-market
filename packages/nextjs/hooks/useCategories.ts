@@ -9,8 +9,8 @@ export interface Category {
 }
 
 export const useCategories = () => {
-  const contractAddress = deployedContracts[11155111].PredictionMarketV2.address;
-  const contractAbi = deployedContracts[11155111].PredictionMarketV2.abi;
+  const contractAddress = deployedContracts[11155111].PredictionMarketV3.address;
+  const contractAbi = deployedContracts[11155111].PredictionMarketV3.abi;
 
   // Get category count
   const { data: categoryCount } = useReadContract({
@@ -34,8 +34,8 @@ export const useCategories = () => {
 };
 
 export const useCategory = (categoryId: number) => {
-  const contractAddress = deployedContracts[11155111].PredictionMarketV2.address;
-  const contractAbi = deployedContracts[11155111].PredictionMarketV2.abi;
+  const contractAddress = deployedContracts[11155111].PredictionMarketV3.address;
+  const contractAbi = deployedContracts[11155111].PredictionMarketV3.abi;
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: contractAddress,
@@ -53,8 +53,8 @@ export const useCategory = (categoryId: number) => {
 };
 
 export const useAllCategories = () => {
-  const contractAddress = deployedContracts[11155111].PredictionMarketV2.address;
-  const contractAbi = deployedContracts[11155111].PredictionMarketV2.abi;
+  const contractAddress = deployedContracts[11155111].PredictionMarketV3.address;
+  const contractAbi = deployedContracts[11155111].PredictionMarketV3.abi;
 
   const { data: categoryCount } = useReadContract({
     address: contractAddress,

@@ -27,7 +27,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 export const useMarkets = (marketCount?: bigint) => {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarketV2" });
+  const { data: contractInfo } = useDeployedContractInfo({ contractName: "PredictionMarketV3" });
   const selectedNetwork = useSelectedNetwork();
   const publicClient = usePublicClient({ chainId: selectedNetwork.id });
   const isFetchingRef = useRef(false);

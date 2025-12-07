@@ -186,7 +186,7 @@ export default function Home() {
               </svg>
             </div>
             <h3 className="text-xl font-semibold mb-2 text-[#111111]">Earn Rewards</h3>
-            <p className="text-gray-600">Successful predictions earn you returns. Create markets and earn fees.</p>
+            <p className="text-gray-600">Successful predictions earn you returns.</p>
           </div>
         </div>
       </div>

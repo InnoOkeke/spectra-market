@@ -8,6 +8,7 @@ import deployedContracts from "~~/contracts/deployedContracts";
 import { usePredictionMarket } from "~~/hooks/usePredictionMarket";
 import { useMarketBets, useUserBet } from "~~/hooks/useMarketBets";
 import { useMarketPoolInfo } from "~~/hooks/useMarketPoolInfo";
+import { useDecryptUserBet } from "~~/hooks/useDecryptUserBet";
 import { toHex, formatEther } from "viem";
 import { useWagmiEthers } from "~~/hooks/wagmi/useWagmiEthers";
 import { useState } from "react";
@@ -67,6 +68,17 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
   
   const { ethersSigner } = useWagmiEthers();
   const { encryptBet } = useFheHelpers({ instance, signer: ethersSigner, contractAddress });
+
+  // Decrypt user's own bet (client-side decryption)
+  const { decryptedAmount, decryptedSide, isDecrypting } = useDecryptUserBet({
+    instance,
+    ethersSigner,
+    chainId: chain?.id,
+    contractAddress,
+    encryptedAmount: userBet?.encryptedAmount,
+    encryptedSide: userBet?.encryptedSide,
+    enabled: !!userBet?.exists && !!instance && !!ethersSigner,
+  });
 
   // Compute market data directly from hooks instead of separate useEffect
   const marketData = useMemo(() => {
@@ -132,36 +144,33 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
         throw new Error("Missing encryption or contract dependencies");
       }
 
-      // Encrypt both amount AND side for full privacy (V3)
-      setLoadingStep("Encrypting bet amount and side...");
-      const encAmount = await encryptBet((builder: any) => {
-        builder.add64(BigInt(Math.floor(Number(amount) * 1e18)));
+      // Encrypt both amount AND side in ONE call for speed (V3)
+      setLoadingStep("Encrypting bet (amount + side)...");
+      const encrypted = await encryptBet((builder: any) => {
+        builder.add64(BigInt(Math.floor(Number(amount) * 1e18))); // First: amount
+        builder.addBool(side === "yes");                          // Second: side
       });
       
-      const encSide = await encryptBet((builder: any) => {
-        builder.addBool(side === "yes");
-      });
-      
-      if (!encAmount || !encAmount.handles || !encSide || !encSide.handles || !encAmount.inputProof) {
-        throw new Error("Encryption failed");
+      if (!encrypted || !encrypted.handles || encrypted.handles.length < 2 || !encrypted.inputProof) {
+        throw new Error("Encryption failed - invalid encrypted data");
       }
 
       console.log("Encrypted data:", {
-        amountHandleLength: encAmount.handles[0].length,
-        sideHandleLength: encSide.handles[0].length,
-        inputProofLength: encAmount.inputProof.length,
+        amountHandleLength: encrypted.handles[0].length,
+        sideHandleLength: encrypted.handles[1].length,
+        inputProofLength: encrypted.inputProof.length,
       });
 
       const marketId = BigInt(id);
       const betValue = BigInt(Math.floor(Number(amount) * 1e18));
       
-      // Send both encrypted amount and side (V3)
+      // Send both encrypted values (handles[0] = amount, handles[1] = side)
       setLoadingStep("Waiting for wallet confirmation...");
       await placeBetContract(
         marketId,
-        toHex(encAmount.handles[0]) as `0x${string}`,
-        toHex(encSide.handles[0]) as `0x${string}`,
-        toHex(encAmount.inputProof) as `0x${string}`,
+        toHex(encrypted.handles[0]) as `0x${string}`,  // Encrypted amount
+        toHex(encrypted.handles[1]) as `0x${string}`,  // Encrypted side
+        toHex(encrypted.inputProof) as `0x${string}`,  // Shared proof
         betValue
       );
 
@@ -241,7 +250,21 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
             </div>
             <div>
               <div className="text-sm text-gray-600 mb-1">Your Position</div>
-              <div className="text-2xl font-bold text-[#0FA958]">🔐 Encrypted</div>
+              <div className="text-2xl font-bold text-[#0FA958]">
+                {userBet?.exists ? (
+                  isDecrypting ? (
+                    <span className="text-sm">🔓 Decrypting...</span>
+                  ) : decryptedAmount !== null && decryptedSide !== null ? (
+                    <span className="text-sm">
+                      {formatEther(decryptedAmount)} ETH on {decryptedSide ? "YES" : "NO"}
+                    </span>
+                  ) : (
+                    "🔐 Encrypted"
+                  )
+                ) : (
+                  <span className="text-gray-400 text-base">No bet yet</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
