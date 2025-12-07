@@ -120,7 +120,6 @@ export const useMarkets = (marketCount?: bigint) => {
         marketCache.set(cacheKey, { data: allMarketsData, timestamp: Date.now() });
       })
       .catch(error => {
-        console.error("Error fetching markets:", error);
         setMarkets([]);
       })
       .finally(() => {

@@ -27,6 +27,19 @@ export const DappWrapperWithProviders = ({ children }: { children: React.ReactNo
 
   useEffect(() => {
     setMounted(true);
+
+    // Suppress harmless FHEVM relayer analytics errors
+    if (typeof window !== "undefined") {
+      const originalError = console.error;
+      console.error = (...args: any[]) => {
+        const errorMessage = args[0]?.toString() || "";
+        // Filter out relayer analytics fetch errors (non-critical)
+        if (errorMessage.includes("Analytics SDK") || errorMessage.includes("relayer-sdk-js")) {
+          return;
+        }
+        originalError.apply(console, args);
+      };
+    }
   }, []);
 
   return (

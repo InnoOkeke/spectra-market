@@ -72,7 +72,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
   const { encryptBet } = useFheHelpers({ instance, signer: ethersSigner, contractAddress });
 
   // Decrypt user's own bet (client-side decryption)
-  const { decryptedAmount, decryptedSide, isDecrypting } = useDecryptUserBet({
+  const { decryptedAmount, decryptedSide, isDecrypting, canDecrypt, decrypt } = useDecryptUserBet({
     instance,
     ethersSigner,
     chainId: chain?.id,
@@ -112,7 +112,6 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
         category: question.includes("BTC") || question.includes("ETH") ? "Crypto" : "Finance",
       };
     } catch (error) {
-      console.error("Error computing market data:", error);
       return null;
     }
   }, [id, contractMarketData, poolInfo]);
@@ -165,12 +164,6 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
         throw new Error("Encryption failed - invalid encrypted data");
       }
 
-      console.log("Encrypted data:", {
-        amountHandleLength: encrypted.handles[0].length,
-        sideHandleLength: encrypted.handles[1].length,
-        inputProofLength: encrypted.inputProof.length,
-      });
-
       const marketId = BigInt(id);
       const betValue = BigInt(Math.floor(Number(amount) * 1e18));
       
@@ -192,7 +185,6 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
         setLoadingStep("");
       }, 3000);
     } catch (error) {
-      console.error("Bet placement error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       alert(`Failed to place bet: ${errorMessage}`);
     } finally {
@@ -262,15 +254,7 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
               <div className="text-sm text-gray-600 mb-1">Your Position</div>
               <div className="text-2xl font-bold text-[#0FA958]">
                 {userBet?.exists ? (
-                  isDecrypting ? (
-                    <span className="text-sm">🔓 Decrypting...</span>
-                  ) : decryptedAmount !== null && decryptedSide !== null ? (
-                    <span className="text-sm">
-                      {formatEther(decryptedAmount)} ETH on {decryptedSide ? "YES" : "NO"}
-                    </span>
-                  ) : (
-                    "🔐 Encrypted"
-                  )
+                  <span className="text-sm">🔐 Encrypted</span>
                 ) : (
                   <span className="text-gray-400 text-base">No bet yet</span>
                 )}

@@ -12,16 +12,6 @@ export const usePredictionMarket = () => {
   
   const { writeContractAsync } = useWriteContract();
 
-  console.log('DEBUG usePredictionMarket:', {
-    contractAddress: contractInfo?.address,
-    networkId: selectedNetwork.id,
-    connectedChainId,
-    isConnected,
-    accountAddress,
-    hasPublicClient: !!publicClient,
-    networkMismatch: connectedChainId !== selectedNetwork.id,
-  });
-
   const { data: marketCount, isError, error, isLoading } = useReadContract({
     address: contractInfo?.address,
     abi: contractInfo?.abi,
@@ -35,17 +25,6 @@ export const usePredictionMarket = () => {
   });
 
   useEffect(() => {
-    console.log('DEBUG marketCount:', {
-      marketCount: marketCount?.toString(),
-      isError,
-      isLoading,
-      error: error?.message,
-      chainId: selectedNetwork.id,
-      publicClientChain: publicClient?.chain?.id,
-    });
-  }, [marketCount, isError, error, isLoading, selectedNetwork.id, publicClient]);
-
-  useEffect(() => {
     if (!contractInfo?.address || !publicClient) return;
     
     publicClient
@@ -55,11 +34,10 @@ export const usePredictionMarket = () => {
         functionName: "getMarketCount",
       })
       .then(value => {
-        console.log('DEBUG fallback read result:', value?.toString());
         setFallbackMarketCount(value as bigint);
       })
       .catch((err) => {
-        console.error('DEBUG fallback read error:', err);
+        // Fallback read error
       });
   }, [contractInfo, publicClient]);
 

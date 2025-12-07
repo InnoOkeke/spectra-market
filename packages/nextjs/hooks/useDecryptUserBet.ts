@@ -21,8 +21,7 @@ export const useDecryptUserBet = (params: {
 
   const [decryptedAmount, setDecryptedAmount] = useState<bigint | null>(null);
   const [decryptedSide, setDecryptedSide] = useState<boolean | null>(null);
-  const [isDecrypting, setIsDecrypting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isManuallyDecrypting, setIsManuallyDecrypting] = useState(false);
 
   // Create storage for decryption signatures (localStorage)
   const storage = useMemo(() => {
@@ -46,7 +45,7 @@ export const useDecryptUserBet = (params: {
     ];
   }, [enabled, contractAddress, encryptedAmount, encryptedSide]);
 
-  const { canDecrypt, decrypt, results, isDecrypting: hookIsDecrypting, error: hookError } = useFHEDecrypt({
+  const { canDecrypt, decrypt, results, isDecrypting, error, message } = useFHEDecrypt({
     instance,
     ethersSigner,
     fhevmDecryptionSignatureStorage: storage!,
@@ -54,48 +53,43 @@ export const useDecryptUserBet = (params: {
     requests,
   });
 
-  // Trigger decryption when ready
-  useEffect(() => {
-    if (canDecrypt && enabled && !isDecrypting && !decryptedAmount && !decryptedSide) {
-      setIsDecrypting(true);
-      decrypt();
-    }
-  }, [canDecrypt, enabled, decrypt, isDecrypting, decryptedAmount, decryptedSide]);
-
-  // Update decrypting state
-  useEffect(() => {
-    setIsDecrypting(hookIsDecrypting);
-  }, [hookIsDecrypting]);
-
-  // Update error state
-  useEffect(() => {
-    if (hookError) {
-      setError(hookError);
-    }
-  }, [hookError]);
+  // Manual decrypt function
+  const manualDecrypt = () => {
+    if (!canDecrypt || !enabled || !requests || requests.length === 0) return;
+    setIsManuallyDecrypting(true);
+    decrypt();
+  };
 
   // Process decryption results
   useEffect(() => {
     if (!results || Object.keys(results).length === 0) return;
+    
+    if (isManuallyDecrypting) {
+      setIsManuallyDecrypting(false);
+    }
+
+    if (decryptedAmount !== null && decryptedSide !== null) return;
 
     const amountHandle = extractHandle(encryptedAmount || "");
     const sideHandle = extractHandle(encryptedSide || "");
 
-    if (amountHandle && results[amountHandle]) {
+    if (amountHandle && results[amountHandle] && decryptedAmount === null) {
       const value = results[amountHandle];
       setDecryptedAmount(typeof value === "bigint" ? value : BigInt(value as string));
     }
 
-    if (sideHandle && results[sideHandle]) {
+    if (sideHandle && results[sideHandle] && decryptedSide === null) {
       const value = results[sideHandle];
       setDecryptedSide(typeof value === "boolean" ? value : Boolean(value));
     }
-  }, [results, encryptedAmount, encryptedSide]);
+  }, [results, encryptedAmount, encryptedSide, decryptedAmount, decryptedSide, isManuallyDecrypting]);
 
   return {
     decryptedAmount,
     decryptedSide,
-    isDecrypting,
+    isDecrypting: isDecrypting || isManuallyDecrypting,
     error,
+    canDecrypt,
+    decrypt: manualDecrypt,
   };
 };
