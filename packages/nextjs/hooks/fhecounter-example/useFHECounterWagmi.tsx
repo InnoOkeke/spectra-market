@@ -39,12 +39,14 @@ export const useFHECounterWagmi = (parameters: {
 
   // Resolve deployed contract info once we know the chain
   const allowedChainId = typeof chainId === "number" ? (chainId as AllowedChainIds) : undefined;
-  const { data: fheCounter } = useDeployedContractInfo({ contractName: "FHECounter", chainId: allowedChainId });
+  // FHECounter is not deployed - this is example code only
+  // Return undefined to disable the hook gracefully
+  const fheCounter = undefined as any;
 
   // Simple status string for UX messages
   const [message, setMessage] = useState<string>("");
 
-  type FHECounterInfo = Contract<"FHECounter"> & { chainId?: number };
+  type FHECounterInfo = any; // Placeholder type
 
   const isRefreshing = false as unknown as boolean; // derived from wagmi below
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -52,30 +54,19 @@ export const useFHECounterWagmi = (parameters: {
   // -------------
   // Helpers
   // -------------
-  const hasContract = Boolean(fheCounter?.address && fheCounter?.abi);
+  const hasContract = false; // Disabled
   const hasProvider = Boolean(ethersReadonlyProvider);
   const hasSigner = Boolean(ethersSigner);
 
   const getContract = (mode: "read" | "write") => {
-    if (!hasContract) return undefined;
-    const providerOrSigner = mode === "read" ? ethersReadonlyProvider : ethersSigner;
-    if (!providerOrSigner) return undefined;
-    return new ethers.Contract(fheCounter!.address, (fheCounter as FHECounterInfo).abi, providerOrSigner);
+    return undefined; // Disabled
   };
 
-  // Read count handle via wagmi
-  const readResult = useReadContract({
-    address: (hasContract ? (fheCounter!.address as unknown as `0x${string}`) : undefined) as `0x${string}` | undefined,
-    abi: (hasContract ? ((fheCounter as FHECounterInfo).abi as any) : undefined) as any,
-    functionName: "getCount" as const,
-    query: {
-      enabled: Boolean(hasContract && hasProvider),
-      refetchOnWindowFocus: false,
-    },
-  });
+  // Read count handle via wagmi - disabled
+  const readResult = { data: undefined, isFetching: false } as any;
 
-  const countHandle = useMemo(() => (readResult.data as string | undefined) ?? undefined, [readResult.data]);
-  const canGetCount = Boolean(hasContract && hasProvider && !readResult.isFetching);
+  const countHandle = undefined;
+  const canGetCount = false; // Disabled
   const refreshCountHandle = useCallback(async () => {
     const res = await readResult.refetch();
     if (res.error) setMessage("FHECounter.getCount() failed: " + (res.error as Error).message);
