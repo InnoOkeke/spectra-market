@@ -17,7 +17,7 @@ export interface Market {
 
 // Cache to store market data across component remounts
 const marketCache = new Map<string, { data: Market[]; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for faster updates
 
 /**
  * Optimized hook that fetches ALL markets in a single batched multicall
@@ -55,7 +55,6 @@ export const useMarkets = (marketCount?: bigint) => {
     const now = Date.now();
 
     if (cached && (now - cached.timestamp) < CACHE_DURATION) {
-      console.log('DEBUG: Using cached market data');
       setMarkets(cached.data);
       setIsLoading(false);
       return;
@@ -69,54 +68,66 @@ export const useMarkets = (marketCount?: bigint) => {
     setIsLoading(true);
     isFetchingRef.current = true;
 
-    const calls = Array.from({ length: count }, (_, i) => ({
-      address: contractInfo.address,
-      abi: contractInfo.abi,
-      functionName: "getMarket",
-      args: [BigInt(i)],
-    }));
+    // Fetch in batches for faster perceived performance
+    const BATCH_SIZE = 5;
+    const batches = [];
+    
+    for (let i = 0; i < count; i += BATCH_SIZE) {
+      const batchEnd = Math.min(i + BATCH_SIZE, count);
+      const batchCalls = Array.from({ length: batchEnd - i }, (_, j) => ({
+        address: contractInfo.address,
+        abi: contractInfo.abi,
+        functionName: "getMarket",
+        args: [BigInt(i + j)],
+      }));
+      batches.push(batchCalls);
+    }
 
-    publicClient
-      .multicall({
-        contracts: calls as any,
-        allowFailure: true,
-      })
-      .then((results) => {
-        console.log('DEBUG: Fetched fresh market data from RPC');
-        const formattedMarkets = results
-          .map((result: any, index: number) => {
-            if (result.status === 'failure' || !result.result) return null;
-            
-            const [question, categoryId, deadline, creator, resolved, winningSide, targetPrice] = result.result;
-            
-            return {
-              id: index,
-              question: question as string,
-              categoryId: categoryId as bigint,
-              deadline: deadline as bigint,
-              creator: creator as `0x${string}`,
-              resolved: resolved as boolean,
-              winningSide: winningSide as boolean,
-              targetPrice: targetPrice as bigint,
-              aggregatedHandles: "0x" as `0x${string}`,
-              inputProof: "0x" as `0x${string}`,
-            };
-          })
-          .filter((m): m is Market => m !== null);
+    // Process batches in parallel
+    const allMarketsData: Market[] = [];
+    
+    Promise.all(
+      batches.map(batchCalls =>
+        publicClient.multicall({ contracts: batchCalls as any })
+      )
+    )
+      .then(batchResults => {
+        // Flatten and process all results
+        batchResults.forEach(batchResult => {
+          batchResult.forEach((result: any, localIndex: number) => {
+            if (result.status === "success" && result.result) {
+              const [question, categoryId, deadline, creator, resolved, winningSide, targetPrice, participantCount, aggregatedHandles, inputProof] = result.result as [
+                string, bigint, bigint, `0x${string}`, boolean, boolean, bigint, bigint, `0x${string}`, `0x${string}`
+              ];
 
-        // Update cache
-        marketCache.set(cacheKey, { data: formattedMarkets, timestamp: now });
-        
-        setMarkets(formattedMarkets);
-        setIsLoading(false);
-        isFetchingRef.current = false;
+              allMarketsData.push({
+                id: allMarketsData.length,
+                question,
+                categoryId,
+                deadline,
+                creator,
+                resolved,
+                winningSide,
+                targetPrice,
+                aggregatedHandles,
+                inputProof,
+              });
+            }
+          });
+        });
+
+        setMarkets(allMarketsData);
+        marketCache.set(cacheKey, { data: allMarketsData, timestamp: Date.now() });
       })
-      .catch(() => {
+      .catch(error => {
+        console.error("Error fetching markets:", error);
         setMarkets([]);
+      })
+      .finally(() => {
         setIsLoading(false);
         isFetchingRef.current = false;
       });
-  }, [contractInfo, publicClient, marketCount]);
+  }, [contractInfo, publicClient, marketCount, selectedNetwork.id]);
 
   return { markets, isLoading };
 };

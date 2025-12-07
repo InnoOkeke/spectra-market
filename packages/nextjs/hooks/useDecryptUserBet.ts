@@ -27,9 +27,8 @@ export const useDecryptUserBet = (params: {
   // Create storage for decryption signatures (localStorage)
   const storage = useMemo(() => {
     if (typeof window === "undefined") return undefined;
-    // Use the class from the package
-    const { GenericStringStorage: StorageClass } = require("@fhevm-sdk");
-    return new StorageClass("fhevm-decryption-sig");
+    // localStorage already implements the GenericStringStorage interface
+    return window.localStorage;
   }, []);
 
   // Build decryption requests

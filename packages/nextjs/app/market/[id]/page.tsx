@@ -51,19 +51,21 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
     args: id && !isNaN(parseInt(id)) ? [BigInt(parseInt(id))] : undefined,
     query: {
       enabled: !!id && !isNaN(parseInt(id)) && !!marketInfo.address && !!marketInfo.abi,
-      staleTime: 60000, // Cache for 1 minute
+      staleTime: 30000, // Cache for 30 seconds
+      refetchInterval: false, // Don't auto-refetch
     },
   });
   
-  // Initialize FHEVM
+  // Initialize FHEVM (lazy load to avoid blocking page render)
   const provider = useMemo(() => {
     if (typeof window === "undefined") return undefined;
     return (window as any).ethereum;
   }, []);
 
-  const { instance } = useFhevm({
+  const { instance, status: fhevmStatus } = useFhevm({
     provider,
-    chainId: chain?.id || 11155111, // Default to Sepolia
+    chainId: chain?.id || 11155111,
+    enabled: isConnected, // Only initialize when connected
   });
   
   const { ethersSigner } = useWagmiEthers();
@@ -82,32 +84,37 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
 
   // Compute market data directly from hooks instead of separate useEffect
   const marketData = useMemo(() => {
-    const marketId = parseInt(id);
-    if (isNaN(marketId)) return null;
+    try {
+      const marketId = parseInt(id);
+      if (isNaN(marketId)) return null;
 
-    if (!contractMarketData || !Array.isArray(contractMarketData)) return null;
+      if (!contractMarketData || !Array.isArray(contractMarketData)) return null;
 
-    const [question, categoryId, deadline, creator, resolved, winningSide, targetPrice] = contractMarketData as [
-      string,
-      bigint,
-      bigint,
-      string,
-      boolean,
-      boolean,
-      bigint,
-    ];
+      const [question, categoryId, deadline, creator, resolved, winningSide, targetPrice] = contractMarketData as [
+        string,
+        bigint,
+        bigint,
+        string,
+        boolean,
+        boolean,
+        bigint,
+      ];
 
-    const participantCount = poolInfo ? Number(poolInfo.participantCount) : 0;
-    const totalBets = participantCount; // V3: Only participant count available
+      const participantCount = poolInfo ? Number(poolInfo.participantCount) : 0;
+      const totalBets = participantCount;
 
-    return {
-      id: marketId,
-      question,
-      deadline: new Date(Number(deadline) * 1000).toLocaleDateString(),
-      volume: totalBets > 0 ? `${totalBets} bet${totalBets !== 1 ? 's' : ''}` : "No bets yet",
-      participants: participantCount,
-      category: question.includes("BTC") || question.includes("ETH") ? "Crypto" : "Finance",
-    };
+      return {
+        id: marketId,
+        question,
+        deadline: new Date(Number(deadline) * 1000).toLocaleDateString(),
+        volume: totalBets > 0 ? `${totalBets} bet${totalBets !== 1 ? 's' : ''}` : "No bets yet",
+        participants: participantCount,
+        category: question.includes("BTC") || question.includes("ETH") ? "Crypto" : "Finance",
+      };
+    } catch (error) {
+      console.error("Error computing market data:", error);
+      return null;
+    }
   }, [id, contractMarketData, poolInfo]);
 
   async function placeBet(e: React.FormEvent) {
@@ -134,7 +141,10 @@ export default function MarketDetails({ params }: { params: Promise<{ id: string
     try {
       // Wait for FHEVM instance and signer if not ready
       if (!instance || !ethersSigner) {
-        alert("Encryption system is initializing. Please wait a moment and try again.");
+        const message = fhevmStatus === "loading" 
+          ? "Initializing encryption system. Please wait..."
+          : "Encryption system not ready. Please refresh and try again.";
+        alert(message);
         setIsSubmitting(false);
         setLoadingStep("");
         return;

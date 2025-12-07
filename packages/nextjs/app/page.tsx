@@ -32,12 +32,6 @@ export default function Home() {
   }, [markets, selectedCategory]);
 
   useEffect(() => {
-    console.log('DEBUG: marketCount =', marketCount?.toString());
-    console.log('DEBUG: markets =', markets);
-    console.log('DEBUG: isMarketsLoading =', isMarketsLoading);
-  }, [marketCount, markets, isMarketsLoading]);
-
-  useEffect(() => {
     fetchUpcomingSportsEvents().then(events => {
       const mappings = getSportsMarketMappings();
       const onChainSportsMarkets = events.filter(event => 
@@ -123,15 +117,33 @@ export default function Home() {
         </div>
 
         {/* Markets Grid */}
-        <div className="grid gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {isMarketsLoading ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-              <div className="animate-spin w-8 h-8 border-4 border-[#0FA958] border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading markets...</p>
-            </div>
+            // Loading skeletons - show 6 placeholder cards for better UX
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-gray-200 p-6 animate-pulse">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="h-5 bg-gray-200 rounded w-24"></div>
+                  <div className="h-5 bg-gray-200 rounded w-16"></div>
+                </div>
+                <div className="h-6 bg-gray-200 rounded w-full mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-6"></div>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <div className="h-4 bg-gray-200 rounded w-20"></div>
+                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                  </div>
+                  <div className="flex justify-between">
+                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    <div className="h-4 bg-gray-200 rounded w-20"></div>
+                  </div>
+                </div>
+              </div>
+            ))
           ) : filteredMarkets.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-              <p className="text-gray-600 mb-4">
+            <div className="col-span-full bg-white rounded-2xl border border-gray-200 p-12 text-center">
+              <div className="text-6xl mb-4">📊</div>
+              <p className="text-gray-600 text-lg mb-2">
                 {selectedCategory !== null
                   ? `No ${CATEGORIES.find(c => c.id === selectedCategory)?.name} markets available yet.`
                   : "No markets available yet."}

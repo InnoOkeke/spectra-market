@@ -29,8 +29,8 @@ export const usePredictionMarket = () => {
     chainId: selectedNetwork.id,
     query: {
       enabled: !!contractInfo?.address && !!publicClient,
-      refetchInterval: 60000, // 1 minute instead of 15 seconds
-      staleTime: 30000, // Consider data fresh for 30 seconds
+      refetchInterval: false, // Disable auto-refetch
+      staleTime: 30000, // 30 seconds
     },
   });
 
